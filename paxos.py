@@ -1,7 +1,12 @@
 import socket
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
+
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import x25519
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+from cryptography.fernet import Fernet
 
 
 ############################### HELPERS #################################
@@ -24,10 +29,7 @@ def tcp_recv_msg(sock):
 
 # used for passing peers as messages in tcp
 def encapsulate_peer(public_key, ip, port):
-    public_key = public_key.public_bytes(
-                encoding=serialization.Encoding.Raw,
-                format=serialization.PublicFormat.Raw).decode("utf-8")
-    return ("PEER;" + public_key + ";" + ip + ";" + str(port)).encode("utf-8")
+    return ("PEER;" + public_key.decode("utf-8") + ";" + ip + ";" + str(port)).encode("utf-8")
 
 def decapsulate_peer(peer):
     peer = peer.decode("utf-8").split(";")
@@ -37,26 +39,29 @@ def decapsulate_peer(peer):
 ##########################################################################
 
 
-
-
-
 class Server:
 
     # each replica is a pubkey -> {ip, port}
     replicas = {}
 
-    def __init__(self, listening_port):
-        # opens tcp socket 
+    def __init__(self, ip, listening_port):
+        # opens tcp socket for listening 
+        pass
 
     def new_replica(self, replica):
         # add new replica to replicas[]
         # sends info about it to existing replicas
+        pass
+
+    def remove_replica(self, replica):
+        pass
 
 
 
 class Replica:
 
-    privsignkey = None
+    secretsignkey = None
+    publicsignkey = None # in bytes
 
     ip = None
     port = None
@@ -86,8 +91,10 @@ class Replica:
         # pk pair for signing messages during this run of paxos.py, will be used for
         # authenticating the ephemeral public key during key exchange when
         # first contacting another replica
-        self.privsignkey = ed25519.Ed25519PrivateKey.generate()
-        publicsignkey = self.privsignkey.public_key()
+        self.secretsignkey = x25519.X25519PrivateKey.generate()
+        self.publicsignkey = self.secretsignkey.public_key().public_bytes(
+                encoding=serialization.Encoding.Raw,
+                format=serialization.PublicFormat.Raw)
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((server_ip, server_port))
@@ -118,16 +125,47 @@ class Replica:
         # returns success or not
         pass
 
+    def exchange_sym_keys(self, peer):
+        if "symkey" in self.peers[peer]:
+            return
+    
+        # we use ECDH
+        # the protocol message for DH is sent signed by our privsignkey
+        
+        ephemeral_key = x25519.X25519PrivateKey.generate()
+
+        sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+        msg = ephemeral_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw)
+
+        signature = self.secretsignkey.sign(msg)
+
+        sock.sendto(b"DH MSG;"+self.publicsignkey+b";"+signature+b";"+msg,
+                                    (peers[peer]["ip"], peers[peer]["port"]))
+
+        peer_msg = None # TO DO: ask listen for dh msg from peer
+        key = ephemeral_key.exchange(ec.ECDH(), peer_msg)
+        derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'', # TO DO: add pkeys here, use lexicographic??
+                ).derive(key)
+        
+        peers[peer]["symkey"] = derived_key
+        peers[peer]["Fernet"] = Fernet(derived_key) # we can use this directly to encrypt/dec for this peer
+
+
     def become_leader(self, ballot):
         # tries to become a leader using ballot number, returns peers that accepted if majority, otherwise False
         # will send prepares in parallel (say 5) through threads, collect outputs (or timeout after some specific dt) and stop
         # when getting majority of prepared
 
         def send_prepare(peer, ballot):
-            # simply sends the prepare message
-            # if this is the first time this peer is contacted then
-            # do key exchange using privsignkey and store symmetric key in peers[]
-            # note this may also happen during listening instead!
+            exchange_sym_keys(peer) # makes sure we have negotiated ephemeral keys
+            # simply sends the prepare message using sym key. Note Fernet gives us authentication already
             pass
 
         slaves = {} # the ones that prepared
@@ -135,9 +173,9 @@ class Replica:
         # randomly sort and send prepares to some peers at once
         # recurse until majority can't be achieved or when it was
         # will probabily run a loop asking listen for how many messages + sleep(0.5)
-        # TO DO: what happens when we get a higher ballot number message?
+        # ZZZ: what happens when we get a higher ballot number message?
 
-        if len(slaves) > len(peers)/2: # fix this, probably wrong when not even
+        if len(slaves) > len(peers)/2: # fix this, probably wrong depending on evenness
             return slaves
         else:
             become_leader(ballot+1) # or return false??
@@ -146,7 +184,11 @@ class Replica:
     def propose(self, value, slaves):
         # we are a leader, propose a value to slaves
 
+    def watcher(self):
+        # decides when to send message..., e.g. by asking for input from user
+        pass
+
     
     def send_accept(self, peer, value):
         #
-    pass
+        pass
