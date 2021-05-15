@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
 import socket
 import time
-import SocketServer
-import threading
+import socketserver
 import time
+import threading
 
 
 class Party:
     def __init__(self):
         self.HOST, self.PORT = "0.0.0.0", 8888
+        proposer_thread = threading.Thread(target=self.proposer)
+        acceptor_thread = threading.Thread(target=self.acceptor)
+        learner_thread = threading.Thread(target=self.learner)
+        proposer_thread.start()
+        acceptor_thread.start()
+        learner_thread.start()
+
+    def proposer(self):
+        pass
+
+    def acceptor(self):
+        pass
+
+    def learner(self):
         pass
 
     def broadcast(self, m):
@@ -25,11 +39,8 @@ class Party:
         # indefinitely when trying to receive data.
         server.settimeout(0.2)
         message = b"your very important message"
-        while True:
-            server.sendto(message, ('<broadcast>', 37020))
-            print("message sent!")
-            time.sleep(1)
-        pass
+        server.sendto(message, ('<broadcast>', 37020))
+        print("message sent!")
 
     def listen(self):
         client = socket.socket(
@@ -47,3 +58,9 @@ class Party:
             data, addr = client.recvfrom(1024)
             print("received message: %s" % data)
         pass
+
+
+if __name__ == "__main__":
+    HOST, PORT = "localhost", 9999
+    with socketserver.UDPServer((HOST, PORT), PaxosUDPHandler) as server:
+        server.serve_forever()
