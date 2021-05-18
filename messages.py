@@ -30,9 +30,8 @@ class Message:
             'payload_string': payload_string,
             'signature': signature,
             'vk': vk
-        }  # checksum?
+        }  # checksum? Bruno: i dont think so, it is signed after all...
         return json.dump(j)
-
 
 class PrepareMessage:
     TYPE = 'prepare'
@@ -76,7 +75,7 @@ class PreparedMessage:
         }
 
     @classmethod
-    def from_json(cls, message):
+    def from_json(cls, j):
         assert(j['type'] == cls.TYPE)
         propose_messages = [PrepareMessage().from_json(
             propose_message) for propose_message in j['propose_messages']]
@@ -103,7 +102,7 @@ class ProposeMessage:
         }
 
     @classmethod
-    def from_json(cls, message):
+    def from_json(cls, j):
         assert(j['type'] == cls.TYPE)
         ballot_number = j['ballot_number']
         value = j['value']
@@ -128,7 +127,70 @@ class AcceptMessage:
         }
 
     @classmethod
-    def from_json(cls, message):
+    def from_json(cls, j):
         assert(j['type'] == cls.TYPE)
         ballot_number = j['ballot_number']
         return cls(ballot_number)
+
+class PeerInfo:
+    TYPE = 'peerinfo'
+
+    @staticmethod
+    def is_valid(message):
+        j = json.load(message)
+        return j['type'] == PeerInfo.TYPE
+
+    def __init__(self, vk, ip, port):
+        self.vk = vk
+        self.ip = ip
+        self.port = port
+
+    def to_json(self):
+        return {
+            'type': self.TYPE,
+            'vk': self.vk,
+            'ip': self.ip,
+            'port': self.port
+        }
+
+    def to_string(self):
+        return json.dump(self.to_json())
+
+    @staticmethod
+    def from_string(str):
+        return PeerInfo().from_json(json.load(str))
+
+    @classmethod
+    def from_json(cls, j):
+        assert(j['type'] == cls.TYPE)
+        vk = j['vk']
+        ip = j['ip']
+        port = j['port']
+        return cls(pkey, ip, port)
+
+class DebugInfo:
+    TYPE = 'debug'
+
+    @staticmethod
+    def is_valid(message):
+        j = json.load(message)
+        return j['type'] == DebugInfo.TYPE
+
+    def __init__(self, vk, msg):
+        self.msg = msg
+        self.vk = vk
+
+    def to_json(self):
+        return {
+            'type': self.TYPE,
+            'vk': self.vk, # we are using vk as an ID
+            'msg': self.msg
+        }
+
+    @classmethod
+    def from_json(cls, j):
+        #j = json.load(j) ??
+        assert(j['type'] == cls.TYPE)
+        msg = j['msg']
+        vk = j['vk']
+        return cls(pkey, msg)

@@ -7,16 +7,34 @@ import time
 import threading
 
 from ecdsa.curves import NIST256p
-from messages import ProposeMessage, PrepareMessage
+from messages import ProposeMessage, PrepareMessage, PeerInfo
 from ecdsa import SigningKey
 
+from coordinator import encapsulate_peer,decapsulate_peer,tcp_recv_msg,tcp_send_msg
 
 class Node:
-    def __init__(self, host, port, nodes):
+    def __init__(self, host, port, server_ip, server_port):
         self.host, self.port = host, port
-        self.nodes = nodes
+        self.nodes = {}
+
         self.sk = SigningKey.generate(curve=NIST256p)
         self.vk = self.sk.verifying_key
+
+        # receives other nodes' informations from coordinator
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((server_ip, server_port))
+
+        msg = PeerInfo(self.vk, host, port).to_string() # TO DO: is vk a bitstr?
+     
+        tcp_send_msg(s, msg)
+
+        while msg = tcp_recv_msg(s):
+            peer = PeerInfo.from_string(msg).to_json()
+            self.nodes[peer['pkey']] = {"ip" : peer['ip'], "port" : peer['port']}
+            # TO DO: use key exchange for an ephemeral key with this peer
+
+        s.close()
+
         self.acceptor_thread = threading.Thread(target=self.acceptor)
         self.learner_thread = threading.Thread(target=self.learner)
         self.proposed_messages = []
