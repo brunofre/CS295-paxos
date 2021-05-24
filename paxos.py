@@ -1,3 +1,25 @@
+# NOT USED RIGHT NOW, REPLACE IT WITH __main__??
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import socket
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
@@ -12,49 +34,15 @@ from cryptography.fernet import Fernet
 ############################### HELPERS #################################
 
 # tcp helpers
-def tcp_send_msg(sock, msg):
-    msg = struct.pack('>I', len(msg)) + msg
-    return sock.sendall(msg)
 
-def tcp_recv_msg(sock):
-    raw_msglen = sock.recv(4)
-    if raw_msglen is None or len(raw_msglen) < 4:
-        return None
-    msglen = struct.unpack('>I', raw_msglen)
-    r = sock.recvfrom(msglen)
-    if len(r[0]) < msglen:
-        return None
-    return r
 
 
 # used for passing peers as messages in tcp
-def encapsulate_peer(public_key, ip, port):
-    return ("PEER;" + public_key.decode("utf-8") + ";" + ip + ";" + str(port)).encode("utf-8")
-
-def decapsulate_peer(peer):
-    peer = peer.decode("utf-8").split(";")
-    return (peer[1].encode("utf-8"), peer[2], int(peer[3]))
 
 
 ##########################################################################
 
 
-class Server:
-
-    # each replica is a pubkey -> {ip, port}
-    replicas = {}
-
-    def __init__(self, ip, listening_port):
-        # opens tcp socket for listening 
-        pass
-
-    def new_replica(self, replica):
-        # add new replica to replicas[]
-        # sends info about it to existing replicas
-        pass
-
-    def remove_replica(self, replica):
-        pass
 
 
 
@@ -99,13 +87,6 @@ class Replica:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((server_ip, server_port))
 
-        msg = encapsulate_peer(publicsignkey, ip, listening_port)
-     
-        tcp_send_msg(s, msg)
-
-        while msg = tcp_recv_msg(s):
-            peer = decapsulate_peer(msg)
-            peers[peer[0]] = {"ip" : peer[1], "port" : peer[2]}
 
         listen = self.listening_thread(self.ip, self.port)
 
