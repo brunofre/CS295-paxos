@@ -7,7 +7,7 @@ import time
 import threading
 
 from ecdsa.curves import NIST256p
-from messages import ProposeMessage, PrepareMessage
+from messages import Message, ProposeMessage, PrepareMessage
 from ecdsa import SigningKey
 
 
@@ -30,13 +30,16 @@ class Node:
         self.acceptor_thread.join()
         self.learner_thread.join()
 
-    def prepare(self, n):
-        m = PrepareMessage(n)
-        self.broadcast(m)
+    def prepare(self, ballot_number):
+        self.ballot_number = ballot_number
+        prepare_message = PrepareMessage(ballot_number)
+        message = Message(prepare_message)
+        self.broadcast(message)
 
-    def propose(self, n):
-        ProposeMessage(n)
-        self.broadcast(n)
+    def propose(self, value):
+        propose_message = ProposeMessage(self.ballot_number, value)
+        message = Message(propose_message)
+        self.broadcast(message)
 
     def learner(self):
         pass
@@ -90,6 +93,3 @@ class Node:
 
     def propose_handler(self, message):
         propose_message = ProposeMessage.from_string(message)
-
-    def verify_signature(self, message):
-        pass

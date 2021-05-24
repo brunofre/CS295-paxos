@@ -52,9 +52,9 @@ class PrepareMessage:
         }
 
     @classmethod
-    def from_json(cls, message):
-        assert(message['type'] == cls.TYPE)
-        ballot_number = message['ballot_number']
+    def from_json(cls, j):
+        assert(j['type'] == cls.TYPE)
+        ballot_number = j['ballot_number']
         return cls(ballot_number)
 
 
@@ -76,7 +76,7 @@ class PreparedMessage:
         }
 
     @classmethod
-    def from_json(cls, message):
+    def from_json(cls, j):
         assert(j['type'] == cls.TYPE)
         propose_messages = [PrepareMessage().from_json(
             propose_message) for propose_message in j['propose_messages']]
@@ -103,7 +103,7 @@ class ProposeMessage:
         }
 
     @classmethod
-    def from_json(cls, message):
+    def from_json(cls, j):
         assert(j['type'] == cls.TYPE)
         ballot_number = j['ballot_number']
         value = j['value']
@@ -128,7 +128,7 @@ class AcceptMessage:
         }
 
     @classmethod
-    def from_json(cls, message):
+    def from_json(cls, j):
         assert(j['type'] == cls.TYPE)
         ballot_number = j['ballot_number']
         return cls(ballot_number)
