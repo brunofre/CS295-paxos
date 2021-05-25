@@ -167,6 +167,8 @@ class PeerInfo:
 
     @classmethod
     def from_string(cls, s):
+        if isinstance(s, bytes):
+            s = s.decode("utf-8")
         return cls.from_json(json.load(str))
 
     
