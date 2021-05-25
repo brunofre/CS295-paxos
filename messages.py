@@ -14,12 +14,12 @@ class Message:
 
         assert vk.verify(signature, payload_string)
         payload = json.load(payload_string)
-
-        if PrepareMessage.is_valid(payload):
+        
+        if PrepareMessage.is_valid(payload_string):
             message = PrepareMessage().from_json(payload)
-        elif PreparedMessage.is_valid(payload):
+        elif PreparedMessage.is_valid(payload_string):
             message = PreparedMessage().from_json(payload)
-        elif ProposeMessage.is_valid(payload):
+        elif ProposeMessage.is_valid(payload_string):
             message = ProposeMessage().from_json(payload)
         return cls(message)
 
@@ -30,7 +30,7 @@ class Message:
             'payload_string': payload_string,
             'signature': signature,
             'vk': vk
-        }  # checksum? Bruno: i dont think so, it is signed after all...
+        } 
         return json.dump(j)
 
 class PrepareMessage:
@@ -153,20 +153,23 @@ class PeerInfo:
             'port': self.port
         }
 
-    def to_string(self):
-        return json.dump(self.to_json())
-
-    @staticmethod
-    def from_string(str):
-        return PeerInfo().from_json(json.load(str))
-
     @classmethod
     def from_json(cls, j):
         assert(j['type'] == cls.TYPE)
         vk = j['vk']
         ip = j['ip']
         port = j['port']
-        return cls(pkey, ip, port)
+        return cls(vk, ip, port)
+
+    # we need to/from string since we don't want to sign these messages as class Message does
+    def to_string(self):
+        return json.dump(self.to_json())
+
+    @classmethod
+    def from_string(cls, s):
+        return cls.from_json(json.load(str))
+
+    
 
 class DebugInfo:
     TYPE = 'debug'
@@ -189,8 +192,7 @@ class DebugInfo:
 
     @classmethod
     def from_json(cls, j):
-        #j = json.load(j) ??
         assert(j['type'] == cls.TYPE)
         msg = j['msg']
         vk = j['vk']
-        return cls(pkey, msg)
+        return cls(vk, msg)
