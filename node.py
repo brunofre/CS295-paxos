@@ -83,7 +83,7 @@ class Node:
                 self.propagate_thread.start()
             elif ControllerExitCommand.is_valid(msg):
                 break
-            else: # handle exit message too
+            else:
                 break
 
     def propagate(self, value):
