@@ -40,7 +40,7 @@ class Coordinator:
         if PeerInfo.is_valid(data):
             # first gets replica info from the msg
             info = PeerInfo.from_string(data).to_json()
-            replicas[info["vk"]] = {"ip":info["ip"], "port":info["port"]}
+            self.replicas[info["vk"]] = {"ip":info["ip"], "port":info["port"]}
             # then sends prev replicas to this one
             for vk, r in replicas.items():
                 pinfo = PeerInfo.from_json({"vk":vk, "ip":r["ip"], "port":r["port"]}).to_string()
@@ -48,6 +48,10 @@ class Coordinator:
             # now let older replicas know of the new one
             self.spread_new_replica(info)
 
-    def spread_new_replica(self, replica):
+    def spread_new_replica(self, info):
         # TO DO: send by udp
-        pass
+        for vk, rep in self.replicas:
+            if vk != info["vk"]:
+                pass #then send info
+                #s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+                #s.sendto(info, (UDP_IP, UDP_PORT))

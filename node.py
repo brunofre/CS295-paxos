@@ -28,7 +28,7 @@ class Node:
 
             msg = PeerInfo.from_json({'type':'peerinfo',
                                     'vk':self.vk.to_string().decode("utf-8"),
-                                    'host': host,
+                                    'ip': host,
                                     'port': port}).to_string()
 
             tcp_send_msg(s, msg)
