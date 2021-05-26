@@ -7,15 +7,16 @@ import time
 import threading
 
 from ecdsa.curves import NIST256p
-from messages import ProposeMessage, PrepareMessage, PeerInfo
+from messages import ProposeMessage, PrepareMessage, PeerInfo, ControllerPropagateMessage, ControllerExitCommand
 from ecdsa import SigningKey
 
 from coordinator import encapsulate_peer, decapsulate_peer, tcp_recv_msg, tcp_send_msg
 
 
 class Node:
-    def __init__(self, host, port, server_ip, server_portk, nodes=None):
+    def __init__(self, host, port, server_ip, server_port, nodes=None):
         self.host, self.port = host, port
+        self.server_ip, self.server_port = server_ip, server_port
         self.nodes = {} # dict vk -> {ip, port, status}
 
         self.sk = SigningKey.generate(curve=NIST256p)
@@ -44,33 +45,64 @@ class Node:
             s.close()
 
         self.ballot = 0
-        self.value_to_propagate = None
+        self.value_to_propagate = None # may be updated by a prepared(b, v) message or by controller()
         self.leader = None
-        self.listening_thread = None # calls listen
-        self.controller_thread = None 
+    
+        self.listening_thread = threading.Thread(target=self.listen, args=(,))
+        self.controller_thread = threading.Thread(target=self.controller, args=(,))
 
-        self.listen_log = [] # rotating log, modified by listen() and used by propagate_thread
+        self.listen_log = [] # rotating log, updated by listen() and used by propagate
 
     def listen(self):
-        # listen creates propagate() thread on debug message "propagate this" recv from coordinator
+        # create UDP thread for listening, answer messages as in diagram and stores messages for propagate_thread
         pass
 
     def controller(self):
         # for now, controlled by coordinator so we just open a debugging tcp connection to it and
         # wait for "propagate this" messages
-        pass
+        debugsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        debugsocket.connect((self.server_ip, self.server_port))
 
+        # keep debug socket alive
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        debugsocket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 10 * 60)
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5 * 60)
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)    
+
+        self.ds = debugsocket # will be used to send back debug logs to coordinator
+
+        while True:
+            msg = tcp_recv_msg(self.ds)
+            if ControllerPropagateMessage.is_valid(msg):
+                msg = ControllerPropagateMessage.from_string(msg).to_json()
+                if self.propagate_thread is not None:
+                    self.stop_propagate = True # flag that tells propagate_thread to stop trying to propagate
+                    self.propagate_thread.join()
+                self.propagate_thread = threading.Thread(target=self.propagate, args=(msg["value"]))
+                self.propagate_thread.start()
+            elif ControllerExitCommand.is_valid(msg):
+                break
+            else: # handle exit message too
+                break
+
+    def propagate(self, value):
+        # called by controller, uses listen_log to see which messages where received back
+        self.ballot += 1
+        pass    
+        
     def start(self):
         self.listening_thread.start()
         self.controller_thread.start()        
 
     def stop(self):
-        self.listening_thread.join()
+        self.stop_propagate = True
+        self.propagate_thread.join()
+
+        self.listening_thread.join() # kill these ??
         self.controller_thread.join()
 
-    def propagate(self, value):
-        pass
-
+    
 
 
     ########################################### OLD STUFF BELOW ###################################

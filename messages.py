@@ -36,10 +36,10 @@ class Message:
 class PrepareMessage:
     TYPE = 'prepare'
 
-    @staticmethod
-    def is_valid(message):
+    @classmethod
+    def is_valid(cls, message):
         j = json.load(message)
-        return j['type'] == PrepareMessage.TYPE
+        return j['type'] == cls.TYPE
 
     def __init__(self, ballot_number):
         self.ballot_number = ballot_number
@@ -60,10 +60,10 @@ class PrepareMessage:
 class PreparedMessage:
     TYPE = 'prepared'
 
-    @staticmethod
-    def is_valid(message):
+    @classmethod
+    def is_valid(cls, message):
         j = json.load(message)
-        return j['type'] == PrepareMessage.TYPE
+        return j['type'] == cls.TYPE
 
     def __init__(self, propose_messages):
         self.propose_messages = propose_messages
@@ -85,10 +85,10 @@ class PreparedMessage:
 class ProposeMessage:
     TYPE = 'propose'
 
-    @staticmethod
-    def is_valid(message):
+    @classmethod
+    def is_valid(cls, message):
         j = json.load(message)
-        return j['type'] == PrepareMessage.TYPE
+        return j['type'] == cls.TYPE
 
     def __init__(self, ballot_number, value):
         self.ballot_number = ballot_number
@@ -112,10 +112,10 @@ class ProposeMessage:
 class AcceptMessage:
     TYPE = 'accept'
 
-    @staticmethod
-    def is_valid(message):
+    @classmethod
+    def is_valid(cls, message):
         j = json.load(message)
-        return j['type'] == PrepareMessage.TYPE
+        return j['type'] == cls.TYPE
 
     def __init__(self, ballot_number):
         self.ballot_number = ballot_number
@@ -135,10 +135,10 @@ class AcceptMessage:
 class PeerInfo:
     TYPE = 'peerinfo'
 
-    @staticmethod
-    def is_valid(message):
+    @classmethod
+    def is_valid(cls, message):
         j = json.load(message)
-        return j['type'] == PeerInfo.TYPE
+        return j['type'] == cls.TYPE
 
     def __init__(self, vk, ip, port):
         self.vk = vk
@@ -169,17 +169,17 @@ class PeerInfo:
     def from_string(cls, s):
         if isinstance(s, bytes):
             s = s.decode("utf-8")
-        return cls.from_json(json.load(str))
+        return cls.from_json(json.load(s))
 
     
 
 class DebugInfo:
     TYPE = 'debug'
 
-    @staticmethod
-    def is_valid(message):
+    @classmethod
+    def is_valid(cls, message):
         j = json.load(message)
-        return j['type'] == DebugInfo.TYPE
+        return j['type'] == cls.TYPE
 
     def __init__(self, vk, msg):
         self.msg = msg
@@ -198,3 +198,67 @@ class DebugInfo:
         msg = j['msg']
         vk = j['vk']
         return cls(vk, msg)
+
+class ControllerExitCommand:
+    TYPE = 'exit'
+
+    @classmethod
+    def is_valid(cls, message):
+        j = json.load(message)
+        return j['type'] == cls.TYPE
+
+    def __init__(self):
+        pass
+
+    def to_json(self):
+        return {
+            'type': self.TYPE,
+        }
+
+    @classmethod
+    def from_json(cls, j):
+        assert(j['type'] == cls.TYPE)
+        return cls()
+
+    def to_string(self):
+        msg = json.dump(self.to_json())
+        return msg
+
+    @classmethod
+    def from_string(cls, s):
+        if isinstance(s, bytes):
+            s = s.decode("utf-8")
+        return cls.from_json(json.load(s))
+
+class ControllerPropagateMessage:
+    TYPE = 'propagate'
+
+    @staticmethod
+    def is_valid(message):
+        j = json.load(message)
+        return j['type'] == PrepareMessage.TYPE
+
+    def __init__(self, value):
+        self.value = value
+
+    def to_json(self):
+        return {
+            'type': self.TYPE,
+            'value': self.value
+        }
+
+    @classmethod
+    def from_json(cls, j):
+        assert(j['type'] == cls.TYPE)
+        value = j['value']
+        return cls(value)
+
+    @classmethod
+    def from_string(cls, s):
+        if isinstance(s, bytes):
+            s = s.decode("utf-8")
+        return cls.from_json(json.load(s))
+
+    def to_string(self):
+        msg = json.dump(self.to_json())
+        return msg
