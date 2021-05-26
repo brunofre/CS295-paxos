@@ -14,33 +14,34 @@ from coordinator import encapsulate_peer, decapsulate_peer, tcp_recv_msg, tcp_se
 
 
 class Node:
-    def __init__(self, host, port, server_ip, server_port):
+    def __init__(self, host, port, server_ip, server_portk, nodes=None):
         self.host, self.port = host, port
         self.nodes = {} # dict vk -> {ip, port, status}
 
         self.sk = SigningKey.generate(curve=NIST256p)
         self.vk = self.sk.verifying_key
 
-        # receives other nodes' informations from coordinator
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((server_ip, server_port))
+        if nodes is None:
+            # receives other nodes' informations from coordinator
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((server_ip, server_port))
 
-        msg = PeerInfo.from_json({'type':'peerinfo',
-                                  'vk':self.vk.to_string().decode("utf-8"),
-                                  'host': host,
-                                  'port': port}).to_string()
+            msg = PeerInfo.from_json({'type':'peerinfo',
+                                    'vk':self.vk.to_string().decode("utf-8"),
+                                    'host': host,
+                                    'port': port}).to_string()
 
-        tcp_send_msg(s, msg)
+            tcp_send_msg(s, msg)
 
-        msg = tcp_recv_msg(s)
-
-        while len(msg["data"] != 0):
-            peer = PeerInfo.from_string(msg["data"]).to_json()
-            self.nodes[peer['vk']] = {"ip": peer['ip'], "port": peer['port'], "status":None}
             msg = tcp_recv_msg(s)
-            # TO DO: use key exchange for an ephemeral key with this peer
 
-        s.close()
+            while len(msg["data"]) != 0:
+                peer = PeerInfo.from_string(msg["data"]).to_json()
+                self.nodes[peer['vk']] = {"ip": peer['ip'], "port": peer['port'], "status":None}
+                msg = tcp_recv_msg(s)
+                # TO DO: use key exchange for an ephemeral key with this peer
+
+            s.close()
 
         self.ballot = 0
         self.value_to_propagate = None
