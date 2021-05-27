@@ -1,15 +1,33 @@
 import json
 import socket
+import struct
 import base64
+
+def tcp_send_msg(sock, msg):
+    if isinstance(msg, str):
+        msg = msg.encode("utf-8")
+    msg = struct.pack('>I', len(msg)) + msg
+    return sock.sendall(msg)
+
+def tcp_recv_msg(sock):
+    raw_msglen = sock.recv(4)
+    if raw_msglen is None or len(raw_msglen) < 4:
+        return None
+    msglen = struct.unpack('>I', raw_msglen)[0]
+    print(msglen)
+    r = sock.recvfrom(msglen)
+    assert len(r[0]) == msglen
+    return {"data":r[0].decode("utf-8"), "from":r[1]}
 
 def vk_to_str(vk):
     return base64.b64encode(vk.to_string()).decode("ascii")
 def str_to_vk(st):
     return base64.b64decode(st.encode("utf-8"))
 
+# XMessage classes only need to implement init, to_json, from_json and inherit Message
 
 class Message:
-
+    
     TYPE = None
 
     def __init__(self):
@@ -20,6 +38,7 @@ class Message:
         j = json.loads(message)
         return j['type'] == cls.TYPE
 
+    @staticmethod
     def msg_handler(message):
         j = json.loads(message)
         payload_string = j['payload_string']
@@ -29,17 +48,17 @@ class Message:
         assert vk.verify(signature, payload_string)
         payload = json.loads(payload_string)
         
-        if PrepareMessage.is_valid(payload_string):
-            message = PrepareMessage().from_json(payload)
-        elif PreparedMessage.is_valid(payload_string):
-            message = PreparedMessage().from_json(payload)
-        elif ProposeMessage.is_valid(payload_string):
-            message = ProposeMessage().from_json(payload)
-        return message
+        TYPES = {PrepareMessage, PreparedMessage, ProposeMessage, AcceptMessage}
 
-    @staticmethod
-    def from_string(self, message):
-        return self.msg_handler(message)
+        for msgtype in TYPES:
+            if msgtype.is_valid(payload_string):
+                return msgtype.from_json(payload)
+
+    @classmethod
+    def from_string(cls, message):
+        if isinstance(message, bytes):
+            message = message.decode("utf-8")
+        return cls.msg_handler(message)
 
     def to_string(self, sk, vk):
         payload_string = json.dumps(self.to_json())
@@ -76,6 +95,22 @@ class MessageNoSignature:
         if isinstance(s, bytes):
             s = s.decode("utf-8")
         return cls.from_json(json.loads(s))        
+
+    def send_with_tcp(self, sock):
+        msg = self.to_string()
+        tcp_send_msg(sock, msg)
+
+    @staticmethod
+    def msg_handler(msg):
+        TYPES = {PeerInfo, DebugInfo, ControllerExitCommand}
+        for msgtype in TYPES:
+            if msgtype.is_valid(msg):
+                return msgtype.from_string(msg)
+
+
+    def recv_with_tcp(self, sock):
+        msg = tcp_recv_msg(sock)
+
 
 class PrepareMessage(Message):
 
@@ -175,7 +210,6 @@ class PeerInfo(MessageNoSignature):
 
     @classmethod
     def from_json(cls, j):
-        assert(j['type'] == cls.TYPE)
         vk = j['vk']
         ip = j['ip']
         port = j['port']
@@ -198,7 +232,6 @@ class DebugInfo(MessageNoSignature):
 
     @classmethod
     def from_json(cls, j):
-        assert(j['type'] == cls.TYPE)
         msg = j['msg']
         vk = j['vk']
         return cls(vk, msg)
@@ -217,7 +250,6 @@ class ControllerExitCommand(MessageNoSignature):
 
     @classmethod
     def from_json(cls, j):
-        assert(j['type'] == cls.TYPE)
         return cls()
 
 class ControllerPropagateMessage(MessageNoSignature):
@@ -234,6 +266,5 @@ class ControllerPropagateMessage(MessageNoSignature):
 
     @classmethod
     def from_json(cls, j):
-        assert(j['type'] == cls.TYPE)
         value = j['value']
         return cls(value)

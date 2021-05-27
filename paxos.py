@@ -20,14 +20,14 @@ if __name__ == "__main__":
     t = threading.Thread(target=Coordinator, args=(localhost, coordport,))
     threads.append(t)
 
-    for i in range(10):
+    for i in range(3):
         t = threading.Thread(target=Node, args=(localhost, nodesport+i, localhost, coordport,))
         threads.append(t)
 
     for t in threads:
         t.setDaemon(True)
         t.start()
-        time.sleep(1)
+        time.sleep(2)
         
 
     # to do: get user input

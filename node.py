@@ -8,10 +8,8 @@ import threading
 import base64
 
 from ecdsa.curves import NIST256p
-from messages import ProposeMessage, PrepareMessage, PeerInfo, ControllerPropagateMessage, ControllerExitCommand, vk_to_str, str_to_vk
+from messages import *
 from ecdsa import SigningKey
-
-from coordinator import tcp_recv_msg, tcp_send_msg
 
 
 class Node:
@@ -35,9 +33,8 @@ class Node:
         debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)
 
         if nodes is None:
-            # receives other nodes' informations from coordinato
-            msg = PeerInfo.from_json({'type':'peerinfo',
-                                    'vk':vk_to_str(self.vk),
+            # receives other nodes' informations from coordinator
+            msg = PeerInfo.from_json({'vk':vk_to_str(self.vk),
                                     'ip': host,
                                     'port': port}).to_string()
 
@@ -61,6 +58,10 @@ class Node:
         self.controller_thread = threading.Thread(target=self.controller)
 
         self.listen_log = [] # rotating log, updated by listen() and used by propagate
+
+    def print_debug(self, msg):
+        msg = DebugInfo.from_json()
+        tcp_send_msg(self.debugsocket, msg)
 
     def listen(self):
         # create UDP thread for listening, answer messages as in diagram and stores messages for propagate_thread
