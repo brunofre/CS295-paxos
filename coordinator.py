@@ -19,7 +19,7 @@ def tcp_recv_msg(sock):
 
 class Coordinator:
 
-    # each replica is a pubkey -> {ip, port} where port is UDP
+    # each replica is a pubkey -> {ip, port, debugsocket} where port is UDP and socket is TCP
     replicas = {}
 
     def __init__(self, ip, listening_port):
@@ -34,30 +34,32 @@ class Coordinator:
             thread.start_new_thread(self.client_thread, (clientsocket,))
             
     def client_thread(self, c):
-        msg = tcp_recv_msg(c)
-        data, addr = msg["data"], msg["from"]
 
-        if PeerInfo.is_valid(data): # this is a new peer
-            # first gets replica info from the msg
-            info = PeerInfo.from_string(data)
-            # then sends prev replicas to this one
-            for vk, r in self.replicas.items():
-                pinfo = PeerInfo.from_json({"vk":vk, "ip":r["ip"], "port":r["port"]}).to_string()
-                tcp_send_msg(c, pinfo)
-            j = info.to_json()
-            self.replicas[j["vk"]] = {"ip":j["ip"], "port":j["port"]}                
-            # now let older replicas know of the new one
-            self.spread_new_replica(info)
-        elif DebugInfo.is_valid(data): # initializes debug socket for incoming messages/controlling
-            j = data.to_json()
-            self.replicas[j["vk"]]["debug_socket"] = c
-        else:
-            pass
+        while True:
+            msg = tcp_recv_msg(c)
+            data, addr = msg["data"], msg["from"]
+
+            if PeerInfo.is_valid(data): # this is a new peer
+                # first gets replica info from the msg
+                info = PeerInfo.from_string(data)
+                # then sends prev replicas to this one
+                for vk, r in self.replicas.items():
+                    pinfo = PeerInfo.from_json({"vk":vk, "ip":r["ip"], "port":r["port"]}).to_string()
+                    tcp_send_msg(c, pinfo)
+                j = info.to_json()
+                self.replicas[j["vk"]] = {"ip":j["ip"], "port":j["port"], "debugsocket":c}                
+                # now let older replicas know of the new one
+                self.spread_new_replica(info)
+            elif DebugInfo.is_valid(data): # initializes debug socket for incoming messages/controlling
+                j = data.to_json()
+                self.replicas[j["vk"]]["debugsocket"] = c
+            else:
+                pass
 
     def spread_new_replica(self, info):
         j = info.to_json()
         for vk, rep in self.replicas.items():
             if vk != j["vk"]:
-                s = rep["debug_socket"]
-                m = Message(info).to_string()
+                s = rep["debugsocket"]
+                m = info.to_string()
                 tcp_send_msg(s, m)
