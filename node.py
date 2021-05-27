@@ -22,27 +22,35 @@ class Node:
         self.sk = SigningKey.generate(curve=NIST256p)
         self.vk = self.sk.verifying_key
 
-        if nodes is None:
-            # receives other nodes' informations from coordinator
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((server_ip, server_port))
+        # connects to coordinator to get nodes and handle debugging
+        debugsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        debugsocket.connect((self.server_ip, self.server_port))
 
+        # keep debug socket alive
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        debugsocket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 10 * 60)
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5 * 60)
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)
+
+        if nodes is None:
+            # receives other nodes' informations from coordinato
             msg = PeerInfo.from_json({'type':'peerinfo',
                                     'vk':self.vk.to_string().decode("utf-8"),
                                     'ip': host,
                                     'port': port}).to_string()
 
-            tcp_send_msg(s, msg)
+            tcp_send_msg(debugsocket, msg)
 
-            msg = tcp_recv_msg(s)
+            msg = tcp_recv_msg(debugsocket)
 
             while len(msg["data"]) != 0:
                 peer = PeerInfo.from_string(msg["data"]).to_json()
                 self.nodes[peer['vk']] = {"ip": peer['ip'], "port": peer['port'], "status":None}
-                msg = tcp_recv_msg(s)
+                msg = tcp_recv_msg(debugsocket)
                 # TO DO: use key exchange for an ephemeral key with this peer
 
-            s.close()
+        self.debugsocket = debugsocket
 
         self.ballot = 0
         self.value_to_propagate = None # may be updated by a prepared(b, v) message or by controller()
@@ -68,7 +76,9 @@ class Node:
         debugsocket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 10 * 60)
         debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5 * 60)
-        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)    
+        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)
+
+        tcp_send_msg(debugsocket, "debug socket")    
 
         self.ds = debugsocket # will be used to send back debug logs to coordinator
 
