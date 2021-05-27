@@ -1,6 +1,6 @@
 import struct
 import socket
-import thread
+import threading
 from messages import Message,PeerInfo,DebugInfo
 
 def tcp_send_msg(sock, msg):
@@ -31,7 +31,7 @@ class Coordinator:
 
         while True:
             (clientsocket, address) = self.s.accept()
-            thread.start_new_thread(self.client_thread, (clientsocket,))
+            threading.Thread(target=self.client_thread, args=(clientsocket,))
             
     def client_thread(self, c):
 
