@@ -1,5 +1,3 @@
-# NOT USED RIGHT NOW, REPLACE IT WITH __main__??
-
 from node import Node
 from coordinator import Coordinator
 import argparse
@@ -13,7 +11,8 @@ parser = argparse.ArgumentParser(prog='Paxos 101')
 args = parser.parse_args()
 
 
-if __name__ == "main":
+if __name__ == "__main__":
+    print("Starting debugging")
     localhost = "127.0.0.1"
     coordport = 18999
     nodesport = 19000

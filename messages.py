@@ -1,5 +1,11 @@
 import json
 import socket
+import base64
+
+def vk_to_str(vk):
+    return base64.b64encode(vk.to_string()).decode("ascii")
+def str_to_vk(st):
+    return base64.b64decode(st.encode("utf-8"))
 
 class Message:
     def __init__(self, message):
@@ -10,7 +16,7 @@ class Message:
         j = json.load(message)
         payload_string = j['payload_string']
         signature = j['signature']
-        vk = j['vk']
+        vk = str_to_vk(j['vk'])
 
         assert vk.verify(signature, payload_string)
         payload = json.load(payload_string)
@@ -25,6 +31,8 @@ class Message:
 
     def to_string(self, sk, vk):
         payload_string = json.dump(self.message.to_json())
+        if not isinstance(vk, str):
+            vk = vk_to_str(vk)
         signature = sk.sign(payload_string)
         j = {
             'payload_string': payload_string,

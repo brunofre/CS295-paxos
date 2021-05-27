@@ -5,12 +5,13 @@ import time
 import socketserver
 import time
 import threading
+import base64
 
 from ecdsa.curves import NIST256p
-from messages import ProposeMessage, PrepareMessage, PeerInfo, ControllerPropagateMessage, ControllerExitCommand
+from messages import ProposeMessage, PrepareMessage, PeerInfo, ControllerPropagateMessage, ControllerExitCommand, vk_to_str, str_to_vk
 from ecdsa import SigningKey
 
-from coordinator import encapsulate_peer, decapsulate_peer, tcp_recv_msg, tcp_send_msg
+from coordinator import tcp_recv_msg, tcp_send_msg
 
 
 class Node:
@@ -36,7 +37,7 @@ class Node:
         if nodes is None:
             # receives other nodes' informations from coordinato
             msg = PeerInfo.from_json({'type':'peerinfo',
-                                    'vk':self.vk.to_string().decode("utf-8"),
+                                    'vk':vk_to_str(self.vk),
                                     'ip': host,
                                     'port': port}).to_string()
 
@@ -56,8 +57,8 @@ class Node:
         self.value_to_propagate = None # may be updated by a prepared(b, v) message or by controller()
         self.leader = None
     
-        self.listening_thread = threading.Thread(target=self.listen, args=(,))
-        self.controller_thread = threading.Thread(target=self.controller, args=(,))
+        self.listening_thread = threading.Thread(target=self.listen)
+        self.controller_thread = threading.Thread(target=self.controller)
 
         self.listen_log = [] # rotating log, updated by listen() and used by propagate
 
