@@ -11,8 +11,10 @@ def tcp_send_msg(sock, msg):
 
 def tcp_recv_msg(sock):
     raw_msglen = sock.recv(4)
-    assert not (raw_msglen is None or len(raw_msglen) < 4)
-    msglen = struct.unpack('>I', raw_msglen)
+    if raw_msglen is None or len(raw_msglen) < 4:
+        return None
+    msglen = struct.unpack('>I', raw_msglen)[0]
+    print(msglen)
     r = sock.recvfrom(msglen)
     assert len(r[0]) == msglen
     return {"data":r[0].decode("utf-8"), "from":r[1]}
@@ -31,10 +33,12 @@ class Coordinator:
 
         while True:
             (clientsocket, address) = self.s.accept()
-            threading.Thread(target=self.client_thread, args=(clientsocket,))
+            t = threading.Thread(target=self.client_thread, args=(self,clientsocket,))
+            t.start()
             
-    def client_thread(self, c):
+    def client_thread(self, t, c):
 
+        print("Coordinator opening node debug thread")
         while True:
             msg = tcp_recv_msg(c)
             data, addr = msg["data"], msg["from"]
@@ -42,17 +46,18 @@ class Coordinator:
             if PeerInfo.is_valid(data): # this is a new peer
                 # first gets replica info from the msg
                 info = PeerInfo.from_string(data)
+                j = info.to_json()
+                self.replicas[j["vk"]] = {"ip":j["ip"], "port":j["port"], "debugsocket":c, "debugthread":t}                
                 # then sends prev replicas to this one
                 for vk, r in self.replicas.items():
-                    pinfo = PeerInfo.from_json({"vk":vk, "ip":r["ip"], "port":r["port"]}).to_string()
+                    pinfo = PeerInfo.from_json({"type":"peerinfo","vk":vk, "ip":r["ip"], "port":r["port"]}).to_string()
                     tcp_send_msg(c, pinfo)
-                j = info.to_json()
-                self.replicas[j["vk"]] = {"ip":j["ip"], "port":j["port"], "debugsocket":c}                
                 # now let older replicas know of the new one
                 self.spread_new_replica(info)
             elif DebugInfo.is_valid(data): # initializes debug socket for incoming messages/controlling
                 j = data.to_json()
                 self.replicas[j["vk"]]["debugsocket"] = c
+                self.replicas[j["vk"]]["debugthread"] = t
             else:
                 pass
 

@@ -45,7 +45,7 @@ class Node:
 
             msg = tcp_recv_msg(debugsocket)
 
-            while len(msg["data"]) != 0:
+            while msg is not None:
                 peer = PeerInfo.from_string(msg["data"]).to_json()
                 self.nodes[peer['vk']] = {"ip": peer['ip'], "port": peer['port'], "status":None}
                 msg = tcp_recv_msg(debugsocket)

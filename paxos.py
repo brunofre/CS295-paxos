@@ -32,8 +32,8 @@ if __name__ == "__main__":
 
     # to do: get user input
 
-    for x in threads:
-        x.join()
+    #for x in threads:
+    #    x.join()
 
 
 
