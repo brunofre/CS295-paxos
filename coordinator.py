@@ -37,19 +37,27 @@ class Coordinator:
         msg = tcp_recv_msg(c)
         data, addr = msg["data"], msg["from"]
 
-        if PeerInfo.is_valid(data):
+        if PeerInfo.is_valid(data): # this is a new peer
             # first gets replica info from the msg
-            info = PeerInfo.from_string(data).to_json()
-            self.replicas[info["vk"]] = {"ip":info["ip"], "port":info["port"]}
+            info = PeerInfo.from_string(data)
             # then sends prev replicas to this one
-            for vk, r in replicas.items():
+            for vk, r in self.replicas.items():
                 pinfo = PeerInfo.from_json({"vk":vk, "ip":r["ip"], "port":r["port"]}).to_string()
                 tcp_send_msg(c, pinfo)
+            j = info.to_json()
+            self.replicas[j["vk"]] = {"ip":j["ip"], "port":j["port"]}                
             # now let older replicas know of the new one
             self.spread_new_replica(info)
+        elif DebugInfo.is_valid(data): # initializes debug socket for incoming messages/controlling
+            j = data.to_json()
+            self.replicas[j["vk"]]["debug_socket"] = c
+        else:
+            pass
 
     def spread_new_replica(self, info):
-        # TO DO: send by udp
+        j = info.to_json()
         for vk, rep in self.replicas.items():
-            if vk != info["vk"]:
-
+            if vk != j["vk"]:
+                s = rep["debug_socket"]
+                m = Message(info).to_string()
+                tcp_send_msg(s, m)
