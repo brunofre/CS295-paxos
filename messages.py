@@ -1,9 +1,9 @@
 import json
-
+import socket
 
 class Message:
     def __init__(self, message):
-        self.message = message
+        self.message = message # needs to provide to_json, from_json
 
     @classmethod
     def from_string(cls, message):
@@ -32,6 +32,12 @@ class Message:
             'vk': vk
         } 
         return json.dump(j)
+
+    def send_with_udp(self, target_ip, target_port):
+        msg = self.to_string()
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+        s.sendto(msg, (target_ip, target_port))
+        s.close()
 
 class PrepareMessage:
     TYPE = 'prepare'
