@@ -50,8 +50,6 @@ class Coordinator:
 
     def spread_new_replica(self, info):
         # TO DO: send by udp
-        for vk, rep in self.replicas:
+        for vk, rep in self.replicas.items():
             if vk != info["vk"]:
-                pass #then send info
-                #s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
-                #s.sendto(info, (UDP_IP, UDP_PORT))
+
