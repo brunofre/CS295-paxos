@@ -145,19 +145,19 @@ class PrepareMessage(Message):
 
     TYPE = 'prepare'
 
-    def __init__(self, ballot_number):
-        self.ballot_number = ballot_number
+    def __init__(self, ballot):
+        self.ballot = ballot
 
     def to_json(self):
         return {
             'type': self.TYPE,
-            'ballot_number': self.ballot_number
+            'ballot': self.ballot
         }
 
     @classmethod
     def from_json(cls, j):
-        ballot_number = j['ballot_number']
-        return cls(ballot_number)
+        ballot = j['ballot']
+        return cls(ballot)
 
 
 class PreparedMessage(Message):
@@ -185,41 +185,41 @@ class ProposeMessage(Message):
 
     TYPE = 'propose'
 
-    def __init__(self, ballot_number, value):
-        self.ballot_number = ballot_number
+    def __init__(self, ballot, value):
+        self.ballot = ballot
         self.value = value
 
     def to_json(self):
         return {
             'type': self.TYPE,
-            'ballot_number': self.ballot_number,
+            'ballot': self.ballot,
             'value': self.value
         }
 
     @classmethod
     def from_json(cls, j):
-        ballot_number = j['ballot_number']
+        ballot = j['ballot']
         value = j['value']
-        return cls(ballot_number, value)
+        return cls(ballot, value)
 
 
 class AcceptMessage(Message):
 
     TYPE = 'accept'
 
-    def __init__(self, ballot_number):
-        self.ballot_number = ballot_number
+    def __init__(self, ballot):
+        self.ballot = ballot
 
     def to_json(self):
         return {
             'type': self.TYPE,
-            'ballot_number': self.ballot_number
+            'ballot': self.ballot
         }
 
     @classmethod
     def from_json(cls, j):
-        ballot_number = j['ballot_number']
-        return cls(ballot_number)
+        ballot = j['ballot']
+        return cls(ballot)
 
 
 class PeerInfo(MessageNoSignature):

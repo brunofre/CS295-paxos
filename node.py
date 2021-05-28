@@ -62,6 +62,7 @@ class Node:
             msg = Message.recv_with_udp(s)
             self.print_debug("rcv node msg " + str(msg.to_json()))
             if msg.TYPE == "prepare":
+                if msg.ballot
                 pass
             elif msg.TYPE == "propose":
                 pass
@@ -142,14 +143,14 @@ class Node:
 
 
 
-    def prepare(self, ballot_number):
-        self.ballot_number = ballot_number
-        prepare_message = PrepareMessage(ballot_number)
+    def prepare(self, ballot):
+        self.ballot = ballot
+        prepare_message = PrepareMessage(ballot)
         message = Message(prepare_message)
         self.broadcast(message)
 
     def propose(self, value):
-        propose_message = ProposeMessage(self.ballot_number, value)
+        propose_message = ProposeMessage(self.ballot, value)
         message = Message(propose_message)
         self.broadcast(message)
 
@@ -197,7 +198,7 @@ class Node:
 
     def prepare_handler(self, message):
         prepare_message = PrepareMessage.from_string(message)
-        if prepare_message.ballot_number > self.max_ballot_number:
+        if prepare_message.ballot > self.max_ballot:
             prepared_messages = [m.to_json() for m in self.proposed_messages]
             m = json.dump(prepared_messages)
             self.broadcast(m)
