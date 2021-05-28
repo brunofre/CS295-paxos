@@ -49,6 +49,7 @@ def str_to_vk(st):
 class Message:
 
     TYPE = None
+    vk = None
 
     def __init__(self):
         pass
@@ -64,6 +65,8 @@ class Message:
         payload_string = j['payload_string']
         signature = j['signature']
         vk = str_to_vk(j['vk'])
+
+        self.vk = vk
 
         assert vk.verify(signature, payload_string)
         payload = json.loads(payload_string)
