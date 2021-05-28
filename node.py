@@ -38,7 +38,6 @@ class Node:
 
         self.ballot = 0
         self.value_to_propagate = None # may be updated by a prepared(b, v) message or by controller()
-        self.leader = None
     
         self.listening_thread = threading.Thread(target=self.listen)
         self.stop_listen = False
@@ -62,8 +61,15 @@ class Node:
             msg = Message.recv_with_udp(s)
             self.print_debug("rcv node msg " + str(msg.to_json()))
             if msg.TYPE == "prepare":
-                if msg.ballot
-                pass
+                if msg.ballot > self.ballot:
+                    self.stop_propagate = True
+                    self.nodes[msg.vk]["status"] = "leader"
+                    self.ballot = msg.ballot
+                    fromnode = self.nodes[msg.vk]
+                    preparedmsg = PreparedMessage(msg.ballot, self.value_to_propagate)
+                    preparedmsg.send_with_udp(fromnode["ip"], fromnode["port"])
+                else:
+                    pass
             elif msg.TYPE == "propose":
                 pass
             elif msg.TYPE == "accept":

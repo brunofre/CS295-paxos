@@ -167,21 +167,23 @@ class PreparedMessage(Message):
 
     TYPE = 'prepared'
 
-    def __init__(self, propose_messages):
-        self.propose_messages = propose_messages
+    def __init__(self, ballot, value):
+        self.ballot = ballot
+        self.value = value
 
     def to_json(self):
         return {
             'type': self.TYPE,
-            'propose_messages': [propose_message.to_json() for propose_message in self.propose_messages]
+            'ballot': self.ballot,
+            'value': self.value
         }
-
-    # TO DO: fix this
+        
     @classmethod
     def from_json(cls, j):
-        propose_messages = [PrepareMessage().from_json(
-            propose_message) for propose_message in j['propose_messages']]
-        return cls(propose_messages)
+        ballot = j['ballot']
+        value = j['value']
+        return cls(ballot, value)
+
 
 
 class ProposeMessage(Message):
