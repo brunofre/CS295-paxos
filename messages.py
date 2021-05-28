@@ -5,6 +5,7 @@ import base64
 from ecdsa.curves import NIST256p
 from ecdsa.keys import VerifyingKey
 
+############# HELPERS
 
 def tcp_send_msg(sock, msg):
     if isinstance(msg, str):
@@ -19,9 +20,19 @@ def tcp_recv_msg(sock):
         return None
     msglen = struct.unpack('>I', raw_msglen)[0]
     r = sock.recvfrom(msglen)
-    assert len(r[0]) == msglen
+    if len(r[0]) != msglen:
+        return None
     return {"data": r[0].decode("utf-8"), "from": r[1]}
 
+def udp_send_msg(ip, port, msg):
+    if isinstance(msg, str):
+        msg = msg.encode("utf-8")
+    msg = struct.pack('>I', len(msg)) + msg
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.sendto(msg, (ip, port))
+    s.close()
+
+udp_recv_msg = tcp_recv_msg
 
 def vk_to_str(vk):
     return vk.to_string().hex()
@@ -29,6 +40,8 @@ def vk_to_str(vk):
 
 def str_to_vk(st):
     return VerifyingKey.from_string(bytes.fromhex(st), curve=NIST256p)
+
+################
 
 # XMessage classes only need to implement init, to_json, from_json and inherit Message
 
@@ -80,9 +93,14 @@ class Message:
 
     def send_with_udp(self, target_ip, target_port):
         msg = self.to_string()
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.sendto(msg, (target_ip, target_port))
-        s.close()
+        udp_send_msg(target_ip, target_port, msg)
+
+    @classmethod
+    def recv_with_udp(cls, sock):
+        msg = udp_recv_msg(sock)
+        if msg is None:
+            return None
+        return cls.msg_handler(msg["data"])
 
 
 class MessageNoSignature:
