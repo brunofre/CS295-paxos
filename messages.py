@@ -2,12 +2,17 @@ import json
 import socket
 import struct
 import base64
+from ecdsa.curves import NIST256p
+
+from ecdsa.keys import VerifyingKey
+
 
 def tcp_send_msg(sock, msg):
     if isinstance(msg, str):
         msg = msg.encode("utf-8")
     msg = struct.pack('>I', len(msg)) + msg
     return sock.sendall(msg)
+
 
 def tcp_recv_msg(sock):
     raw_msglen = sock.recv(4)
@@ -16,17 +21,21 @@ def tcp_recv_msg(sock):
     msglen = struct.unpack('>I', raw_msglen)[0]
     r = sock.recvfrom(msglen)
     assert len(r[0]) == msglen
-    return {"data":r[0].decode("utf-8"), "from":r[1]}
+    return {"data": r[0].decode("utf-8"), "from": r[1]}
+
 
 def vk_to_str(vk):
-    return base64.b64encode(vk.to_string()).decode("ascii")
+    return vk.to_string()
+
+
 def str_to_vk(st):
-    return base64.b64decode(st.encode("utf-8"))
+    return VerifyingKey.from_string(st, curve=NIST256p)
 
 # XMessage classes only need to implement init, to_json, from_json and inherit Message
 
+
 class Message:
-    
+
     TYPE = None
 
     def __init__(self):
@@ -46,8 +55,9 @@ class Message:
 
         assert vk.verify(signature, payload_string)
         payload = json.loads(payload_string)
-        
-        TYPES = {PrepareMessage, PreparedMessage, ProposeMessage, AcceptMessage}
+
+        TYPES = {PrepareMessage, PreparedMessage,
+                 ProposeMessage, AcceptMessage}
 
         for msgtype in TYPES:
             if msgtype.is_valid(payload_string):
@@ -68,14 +78,15 @@ class Message:
             'payload_string': payload_string,
             'signature': signature,
             'vk': vk
-        } 
+        }
         return json.dumps(j)
 
     def send_with_udp(self, target_ip, target_port):
         msg = self.to_string()
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.sendto(msg, (target_ip, target_port))
         s.close()
+
 
 class MessageNoSignature:
 
@@ -156,7 +167,7 @@ class PreparedMessage(Message):
 
 
 class ProposeMessage(Message):
-    
+
     TYPE = 'propose'
 
     def __init__(self, ballot_number, value):
@@ -176,6 +187,7 @@ class ProposeMessage(Message):
         value = j['value']
         return cls(ballot_number, value)
 
+
 class AcceptMessage(Message):
 
     TYPE = 'accept'
@@ -193,6 +205,7 @@ class AcceptMessage(Message):
     def from_json(cls, j):
         ballot_number = j['ballot_number']
         return cls(ballot_number)
+
 
 class PeerInfo(MessageNoSignature):
 
@@ -220,6 +233,7 @@ class PeerInfo(MessageNoSignature):
         port = j['port']
         return cls(vk, ip, port)
 
+
 class DebugInfo(MessageNoSignature):
 
     TYPE = 'debug'
@@ -233,7 +247,7 @@ class DebugInfo(MessageNoSignature):
     def to_json(self):
         return {
             'type': self.TYPE,
-            'vk': self.vk, # we are using vk as an ID
+            'vk': self.vk,  # we are using vk as an ID
             'msg': self.msg
         }
 
@@ -243,8 +257,9 @@ class DebugInfo(MessageNoSignature):
         vk = j['vk']
         return cls(vk, msg)
 
+
 class ControllerExitCommand(MessageNoSignature):
-    
+
     TYPE = 'exit'
 
     def __init__(self):
@@ -258,6 +273,7 @@ class ControllerExitCommand(MessageNoSignature):
     @classmethod
     def from_json(cls, j):
         return cls()
+
 
 class ControllerPropagateMessage(MessageNoSignature):
     TYPE = 'propagate'
