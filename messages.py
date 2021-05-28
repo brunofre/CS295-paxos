@@ -27,12 +27,13 @@ def tcp_recv_msg(sock):
 def udp_send_msg(ip, port, msg):
     if isinstance(msg, str):
         msg = msg.encode("utf-8")
-    msg = struct.pack('>I', len(msg)) + msg
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.sendto(msg, (ip, port))
     s.close()
 
-udp_recv_msg = tcp_recv_msg
+def udp_recv_msg(sock):
+    r = sock.recv(4096)
+    return r.decode("utf-8")
 
 def vk_to_str(vk):
     return vk.to_string().hex()
@@ -63,12 +64,10 @@ class Message:
     def msg_handler(message):
         j = json.loads(message)
         payload_string = j['payload_string']
-        signature = j['signature']
-        vk = str_to_vk(j['vk'])
+        signature = bytes.fromhex(j['signature'])
+        vk = j['vk']
 
-        self.vk = vk
-
-        assert vk.verify(signature, payload_string)
+        assert str_to_vk(vk).verify(signature, payload_string.encode("utf-8"))
         payload = json.loads(payload_string)
 
         TYPES = {PrepareMessage, PreparedMessage,
@@ -76,7 +75,11 @@ class Message:
 
         for msgtype in TYPES:
             if msgtype.is_valid(payload_string):
-                return msgtype.from_json(payload)
+                msg = msgtype.from_json(payload)
+        
+        assert msg is not None
+        msg.vk = vk
+        return msg
 
     @classmethod
     def from_string(cls, message):
@@ -86,7 +89,7 @@ class Message:
 
     def to_string(self, sk):
         payload_string = json.dumps(self.to_json())
-        signature = sk.sign(payload_string)
+        signature = sk.sign(payload_string.encode("utf-8")).hex()
         j = {
             'payload_string': payload_string,
             'signature': signature,
@@ -94,8 +97,8 @@ class Message:
         }
         return json.dumps(j)
 
-    def send_with_udp(self, target_ip, target_port):
-        msg = self.to_string()
+    def send_with_udp(self, sk, target_ip, target_port):
+        msg = self.to_string(sk)
         udp_send_msg(target_ip, target_port, msg)
 
     @classmethod
@@ -103,7 +106,7 @@ class Message:
         msg = udp_recv_msg(sock)
         if msg is None:
             return None
-        return cls.msg_handler(msg["data"])
+        return cls.msg_handler(msg)
 
 
 class MessageNoSignature:
@@ -122,11 +125,13 @@ class MessageNoSignature:
     def msg_handler(msg):
         if isinstance(msg, bytes):
             msg = msg.decode("utf-8")
-        TYPES = {PeerInfo, DebugInfo, ControllerExitCommand}
+        TYPES = {PeerInfo, DebugInfo,
+                ControllerExitCommand, ControllerPropagateMessage}
         for msgtype in TYPES:
             if msgtype.is_valid(msg):
                 j = json.loads(msg)
                 return msgtype.from_json(j)
+        return None
 
     @classmethod
     def from_string(cls, msg):
@@ -296,6 +301,7 @@ class ControllerExitCommand(MessageNoSignature):
 
 
 class ControllerPropagateMessage(MessageNoSignature):
+
     TYPE = 'propagate'
 
     def __init__(self, value):

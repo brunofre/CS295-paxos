@@ -42,6 +42,8 @@ class Node:
 
         #self.value_to_propagate = None # may be updated by controller()
     
+        self.propagate_thread = None
+
         self.listening_thread = threading.Thread(target=self.listen)
         self.stop_listen = False
         self.controller_thread = threading.Thread(target=self.controller)
@@ -75,14 +77,14 @@ class Node:
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
                     preparedmsg = PreparedMessage(self.ballot, self.prepared_value)
-                    preparedmsg.send_with_udp(fromnode["ip"], fromnode["port"])
+                    preparedmsg.send_with_udp(self.sk, fromnode["ip"], fromnode["port"])
                     self.ballot = msg.ballot
                 elif msg.TYPE == "propose":
                     if self.leader == msg.vk:
                         self.stop_propagate = True
                         self.prepared_value = msg.value
                         acceptmsg = AcceptMessage(msg.ballot)
-                        acceptmsg.send_with_udp(fromnode["ip"], fromnode["port"])
+                        acceptmsg.send_with_udp(self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
                 else:
@@ -100,12 +102,15 @@ class Node:
             if msg is None:
                 break
             self.print_debug("rcv debug msg" + str(msg.to_json()))
+            print("lul")
+            time.sleep(1)
             if msg.TYPE == "peerinfo":
                 if msg.vk not in self.nodes:
                     self.nodes[msg.vk] = {"ip": msg.ip, "port": msg.port, "status":None}
                     self.print_debug("Got peer" + str(self.nodes[msg.vk]))
             elif msg.TYPE == "propagate":
                 if self.propagate_thread is not None:
+                    self.print_debug("Stopping prev propagate thread")
                     self.stop_propagate = True # flag that tells propagate_thread to stop trying to propagate
                     self.propagate_thread.join()
                 self.propagate_thread = threading.Thread(target=self.propagate, args=(msg.value,))
@@ -114,8 +119,12 @@ class Node:
                 break
             elif msg.TYPE == "done":
                 break
+        self.debugsocket.close()
 
     def propagate(self, value):
+
+        if self.prepared_value is not None:
+            value = self.prepared_value
 
         self.stop_propagate = False
         self.leader = self.vk
@@ -144,7 +153,7 @@ class Node:
             preparemsg = PrepareMessage(ballot)
             for k in keys:
                 target = self.nodes[k]
-                preparemsg.send_with_udp(target["ip"], target["port"])
+                preparemsg.send_with_udp(self.sk, target["ip"], target["port"])
             time.sleep(1) # TO DO: better method here?? we just hope it works in 1sec
             self.listen_log_lock.acquire()
             for msg in self.listen_log:
@@ -163,7 +172,7 @@ class Node:
                 proposemsg = ProposeMessage(ballot, value)
                 for k in prepared_keys:
                     target = self.nodes[k]
-                    proposemsg.send_with_udp(target["ip"], target["port"])
+                    proposemsg.send_with_udp(self.sk, target["ip"], target["port"])
                 time.sleep(1) # TO DO: better method here?? we just hope it works in 1sec
                 self.listen_log_lock.acquire()
                 for  msg in self.listen_log:
@@ -173,6 +182,7 @@ class Node:
                 self.listen_log_lock.release()
                 if len(accept_keys) + 1 > (len(self.nodes)+1)/2:
                     self.print_debug("Succesfully propagated value " + str(value))
+                    self.stop_propagate = True
                     # TO DO: should stop paxos here, make a PaxosDoneMessage type and send it to coordinator, that sends it to other nodes
                 else:
                     self.print_debug("Didn't get enough accepts: " + str(len(accept_keys)) + ", trying again")

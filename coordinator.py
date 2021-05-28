@@ -1,6 +1,6 @@
 import struct
 import socket
-import secrets
+import random
 import threading
 from messages import *
 
@@ -61,8 +61,9 @@ class Coordinator:
     # picks a random replica and tells it to try to propagate this value
     def random_propagate(self, value):
         value = str(value)
-        who = secrets.choice(list(self.replicas.keys()))
+        who = random.choice(list(self.replicas.keys()))
         debugprint("Coordinator telling " + who + " to propagate " + value)
         msg = ControllerPropagateMessage(value)
+        #msg = ControllerExitCommand()
         msg.send_with_tcp(self.replicas[who]["debugsocket"])
 

@@ -36,10 +36,9 @@ if __name__ == "__main__":
     time.sleep(1)
     
     value = input("Enter value to propagate:")
-
     coord.random_propagate(value)
-
-    time.sleep(1)
+    
+    input("")
     # to do: get user input
 
     #for x in threads:
