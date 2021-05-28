@@ -65,7 +65,7 @@ class Node:
             self.print_debug("rcv node msg " + str(msg.to_json()))
 
             if msg.TYPE != "prepared" and msg.ballot < self.ballot:
-                # node prepared msg can have lower ballot
+                # note prepared msg can have lower ballot
                 self.print_debug("older ballot, we are at " + str(self.ballot))
                 # to do: send Nack so nodes stop bothering us with lower ballot stuff?
             else:
@@ -94,7 +94,7 @@ class Node:
 
         s.close()
 
-    def controller(self): # TO DO
+    def controller(self):
         while True:
             msg = MessageNoSignature.recv_with_tcp(self.debugsocket)
             if msg is None:
