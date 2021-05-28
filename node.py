@@ -34,15 +34,18 @@ class Node:
 
         self.debugsocket = debugsocket
 
+        self.print_debug("init")
+
         if nodes is None:
             # receives other nodes' informations from coordinator
-            msg = PeerInfo(self.vk, host, port)
-            msg.send_with_tcp(debugsocket)
+            myinfo = PeerInfo(self.vk, host, port)
+            myinfo.send_with_tcp(debugsocket)
             
             msg = MessageNoSignature.recv_with_tcp(debugsocket)
 
-            while msg is not None:
-                assert msg.TYPE == "peerinfo"
+            while msg is not None and msg.TYPE == "peerinfo":
+                if msg.vk == myinfo.vk: # flag that we already got all peers
+                    break
                 self.nodes[msg.vk] = {"ip": msg.ip, "port": msg.port, "status":None}
                 self.print_debug("Got peer" + str(self.nodes[msg.vk]))
                 msg = MessageNoSignature.recv_with_tcp(debugsocket)
@@ -57,6 +60,8 @@ class Node:
 
         self.listen_log = [] # rotating log, updated by listen() and used by propagate
 
+        self.start()
+
     def print_debug(self, msg):
         msg = DebugInfo(self.vk, msg)
         msg.send_with_tcp(self.debugsocket)
@@ -67,23 +72,26 @@ class Node:
 
     def controller(self): # TO DO
         while True:
-            msg = tcp_recv_msg(self.debugsocket)
-            if ControllerPropagateMessage.is_valid(msg):
-                msg = ControllerPropagateMessage.from_string(msg).to_json()
+            msg = MessageNoSignature.recv_with_tcp(self.debugsocket)
+            self.print_debug("rcv debug msg" + str(msg.to_json()))
+            if msg.TYPE == "peerinfo":
+                if msg.vk not in self.nodes:
+                    self.nodes[msg.vk] = {"ip": msg.ip, "port": msg.port, "status":None}
+                    self.print_debug("Got peer" + str(self.nodes[msg.vk]))
+            elif msg.TYPE == "propagate":
                 if self.propagate_thread is not None:
                     self.stop_propagate = True # flag that tells propagate_thread to stop trying to propagate
                     self.propagate_thread.join()
-                self.propagate_thread = threading.Thread(target=self.propagate, args=(msg["value"]))
+                self.propagate_thread = threading.Thread(target=self.propagate, args=(msg.value,))
                 self.propagate_thread.start()
-            elif ControllerExitCommand.is_valid(msg):
-                break
-            else:
-                break
+            elif msg.TYPE == "exit":
+                pass
 
     def propagate(self, value):
         # called by controller, uses listen_log to see which messages where received back
         self.ballot += 1
-        pass    
+        self.print_debug("Will propagate", value)
+        return   
         
     def start(self):
         self.listening_thread.start()

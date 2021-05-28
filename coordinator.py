@@ -3,6 +3,9 @@ import socket
 import threading
 from messages import *
 
+def debugprint(msg):
+    print("DEBUG:", msg)
+
 class Coordinator:
 
     # each replica is a pubkey -> {ip, port, debugsocket} where port is UDP and socket is TCP
@@ -22,7 +25,6 @@ class Coordinator:
             
     def client_thread(self, t, c):
 
-        print("Coordinator opening node debug thread")
         while True:
             msg = MessageNoSignature.recv_with_tcp(c)
             if msg is None:
@@ -30,16 +32,17 @@ class Coordinator:
                 break
             
             if msg.TYPE == "peerinfo": # this is a new peer
-                # first gets replica info from the msg
-                self.replicas[msg.vk] = {"ip":msg.ip, "port":msg.port, "debugsocket":c, "debugthread":t}                
-                # then sends prev replicas to this one
+                # sends prev replicas to this one
                 for vk, r in self.replicas.items():
                     pinfo = PeerInfo(vk, r["ip"], r["port"])
                     pinfo.send_with_tcp(c)
+                self.replicas[msg.vk] = {"ip":msg.ip, "port":msg.port, "debugsocket":c, "debugthread":t}                
+                # tell new node that is all we have by sending his info back
+                msg.send_with_tcp(c)
                 # now let older replicas know of the new one
                 self.spread_new_replica(msg)
             elif msg.TYPE == "debug": # just a debug message, print it
-                print("DEBUG", msg.vk, msg.msg)
+                debugprint(msg.vk[:10] + " " + msg.msg)
             else:
                 pass
 

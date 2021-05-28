@@ -14,7 +14,6 @@ def tcp_recv_msg(sock):
     if raw_msglen is None or len(raw_msglen) < 4:
         return None
     msglen = struct.unpack('>I', raw_msglen)[0]
-    print(msglen)
     r = sock.recvfrom(msglen)
     assert len(r[0]) == msglen
     return {"data":r[0].decode("utf-8"), "from":r[1]}
