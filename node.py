@@ -34,18 +34,16 @@ class Node:
 
         if nodes is None:
             # receives other nodes' informations from coordinator
-            msg = PeerInfo.from_json({'vk':vk_to_str(self.vk),
-                                    'ip': host,
-                                    'port': port}).to_string()
-
-            tcp_send_msg(debugsocket, msg)
-
-            msg = tcp_recv_msg(debugsocket)
+            msg = PeerInfo(self.vk, host, port)
+            msg.send_with_tcp(debugsocket)
+            
+            msg = MessageNoSignature.recv_with_tcp(debugsocket)
 
             while msg is not None:
-                peer = PeerInfo.from_string(msg["data"]).to_json()
+                assert msg.TYPE == "peerinfo"
+                peer = msg.to_json()
                 self.nodes[peer['vk']] = {"ip": peer['ip'], "port": peer['port'], "status":None}
-                msg = tcp_recv_msg(debugsocket)
+                msg = MessageNoSignature.recv_with_tcp(debugsocket)
                 # TO DO: use key exchange for an ephemeral key with this peer
 
         self.debugsocket = debugsocket
@@ -60,7 +58,7 @@ class Node:
         self.listen_log = [] # rotating log, updated by listen() and used by propagate
 
     def print_debug(self, msg):
-        msg = DebugInfo.from_json()
+        msg = DebugInfo(self.vk)
         tcp_send_msg(self.debugsocket, msg)
 
     def listen(self):

@@ -90,26 +90,29 @@ class MessageNoSignature:
     def to_string(self):
         return json.dumps(self.to_json())
 
-    @classmethod
-    def from_string(cls, s):
-        if isinstance(s, bytes):
-            s = s.decode("utf-8")
-        return cls.from_json(json.loads(s))        
-
     def send_with_tcp(self, sock):
         msg = self.to_string()
         tcp_send_msg(sock, msg)
 
     @staticmethod
     def msg_handler(msg):
+        if isinstance(msg, bytes):
+            msg = msg.decode("utf-8")
         TYPES = {PeerInfo, DebugInfo, ControllerExitCommand}
         for msgtype in TYPES:
             if msgtype.is_valid(msg):
-                return msgtype.from_string(msg)
+                j = json.loads(msg)
+                return msgtype.from_json(j)
 
+    @classmethod
+    def from_string(cls, msg):
+        return cls.msg_handler(msg)
 
-    def recv_with_tcp(self, sock):
+    @classmethod
+    def recv_with_tcp(cls, sock):
         msg = tcp_recv_msg(sock)
+        assert msg is not None
+        return cls.msg_handler(msg["data"])
 
 
 class PrepareMessage(Message):
@@ -196,6 +199,8 @@ class PeerInfo(MessageNoSignature):
     TYPE = 'peerinfo'
 
     def __init__(self, vk, ip, port):
+        if not isinstance(vk, str):
+            vk = vk_to_str(vk)
         self.vk = vk
         self.ip = ip
         self.port = port
@@ -221,6 +226,8 @@ class DebugInfo(MessageNoSignature):
 
     def __init__(self, vk, msg):
         self.msg = msg
+        if not isinstance(vk, str):
+            vk = vk_to_str(vk)
         self.vk = vk
 
     def to_json(self):
