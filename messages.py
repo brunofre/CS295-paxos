@@ -3,7 +3,6 @@ import socket
 import struct
 import base64
 from ecdsa.curves import NIST256p
-
 from ecdsa.keys import VerifyingKey
 
 
@@ -25,11 +24,11 @@ def tcp_recv_msg(sock):
 
 
 def vk_to_str(vk):
-    return vk.to_string()
+    return vk.to_string().hex()
 
 
 def str_to_vk(st):
-    return VerifyingKey.from_string(st, curve=NIST256p)
+    return VerifyingKey.from_string(bytes.fromhex(st), curve=NIST256p)
 
 # XMessage classes only need to implement init, to_json, from_json and inherit Message
 
@@ -75,7 +74,7 @@ class Message:
         j = {
             'payload_string': payload_string,
             'signature': signature,
-            'vk': sk.verifying_key
+            'vk': vk_to_str(sk.verifying_key)
         }
         return json.dumps(j)
 
@@ -98,10 +97,6 @@ class MessageNoSignature:
     def to_string(self):
         return json.dumps(self.to_json())
 
-    def send_with_tcp(self, sock):
-        msg = self.to_string()
-        tcp_send_msg(sock, msg)
-
     @staticmethod
     def msg_handler(msg):
         if isinstance(msg, bytes):
@@ -115,6 +110,10 @@ class MessageNoSignature:
     @classmethod
     def from_string(cls, msg):
         return cls.msg_handler(msg)
+
+    def send_with_tcp(self, sock):
+        msg = self.to_string()
+        tcp_send_msg(sock, msg)
 
     @classmethod
     def recv_with_tcp(cls, sock):
