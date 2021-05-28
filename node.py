@@ -41,17 +41,44 @@ class Node:
         self.leader = None
     
         self.listening_thread = threading.Thread(target=self.listen)
+        self.stop_listen = False
         self.controller_thread = threading.Thread(target=self.controller)
 
         self.listen_log = [] # rotating log, updated by listen() and used by propagate
+        self.listen_log_lock = threading.Lock()
 
     def print_debug(self, msg):
         msg = DebugInfo(self.vk, msg)
         msg.send_with_tcp(self.debugsocket)
 
     def listen(self):
-        # create UDP thread for listening, answer messages as in diagram and stores messages for propagate_thread
-        pass
+        
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind((self.host, self.port))
+
+        self.listen_socket = s
+
+        while not self.stop_listen:
+            msg = Message.recv_with_udp(s)
+            self.print_debug("rcv node msg " + str(msg.to_json()))
+            if msg.TYPE == "prepare":
+                pass
+            elif msg.TYPE == "propose":
+                pass
+            elif msg.TYPE == "accept":
+                pass
+            # the remaining need only to modify listen_log for the propagate_thread to use it
+            else:
+                self.listen_log_lock.acquire()
+                if msg.TYPE == "proposed":
+                    pass
+                elif msg.TYPE == "prepared":
+                    pass
+                elif msg.TYPE == "accepted":
+                    pass
+                self.listen_log_lock.release()
+
+        s.close()
 
     def controller(self): # TO DO
         while True:
@@ -70,10 +97,11 @@ class Node:
                 self.propagate_thread = threading.Thread(target=self.propagate, args=(msg.value,))
                 self.propagate_thread.start()
             elif msg.TYPE == "exit":
-                pass
+                break
 
     def propagate(self, value):
         # called by controller, uses listen_log to see which messages where received back
+        self.stop_propagate = False
         self.ballot += 1
         self.print_debug("Will propagate " + value + " using ballot " + str(ballot))
         return   
