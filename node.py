@@ -32,6 +32,8 @@ class Node:
         debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5 * 60)
         debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)
 
+        self.debugsocket = debugsocket
+
         if nodes is None:
             # receives other nodes' informations from coordinator
             msg = PeerInfo(self.vk, host, port)
@@ -41,12 +43,10 @@ class Node:
 
             while msg is not None:
                 assert msg.TYPE == "peerinfo"
-                peer = msg.to_json()
-                self.nodes[peer['vk']] = {"ip": peer['ip'], "port": peer['port'], "status":None}
+                self.nodes[msg.vk] = {"ip": msg.ip, "port": msg.port, "status":None}
+                self.print_debug("Got peer" + str(self.nodes[msg.vk]))
                 msg = MessageNoSignature.recv_with_tcp(debugsocket)
                 # TO DO: use key exchange for an ephemeral key with this peer
-
-        self.debugsocket = debugsocket
 
         self.ballot = 0
         self.value_to_propagate = None # may be updated by a prepared(b, v) message or by controller()
@@ -58,32 +58,16 @@ class Node:
         self.listen_log = [] # rotating log, updated by listen() and used by propagate
 
     def print_debug(self, msg):
-        msg = DebugInfo(self.vk)
-        tcp_send_msg(self.debugsocket, msg)
+        msg = DebugInfo(self.vk, msg)
+        msg.send_with_tcp(self.debugsocket)
 
     def listen(self):
         # create UDP thread for listening, answer messages as in diagram and stores messages for propagate_thread
         pass
 
-    def controller(self):
-        # for now, controlled by coordinator so we just open a debugging tcp connection to it and
-        # wait for "propagate this" messages
-        debugsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        debugsocket.connect((self.server_ip, self.server_port))
-
-        # keep debug socket alive
-        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        debugsocket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 10 * 60)
-        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5 * 60)
-        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)
-
-        tcp_send_msg(debugsocket, "debug socket")    
-
-        self.ds = debugsocket # will be used to send back debug logs to coordinator
-
+    def controller(self): # TO DO
         while True:
-            msg = tcp_recv_msg(self.ds)
+            msg = tcp_recv_msg(self.debugsocket)
             if ControllerPropagateMessage.is_valid(msg):
                 msg = ControllerPropagateMessage.from_string(msg).to_json()
                 if self.propagate_thread is not None:

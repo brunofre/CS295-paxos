@@ -111,7 +111,8 @@ class MessageNoSignature:
     @classmethod
     def recv_with_tcp(cls, sock):
         msg = tcp_recv_msg(sock)
-        assert msg is not None
+        if msg is None:
+            return None
         return cls.msg_handler(msg["data"])
 
 
