@@ -69,15 +69,13 @@ class Message:
             message = message.decode("utf-8")
         return cls.msg_handler(message)
 
-    def to_string(self, sk, vk):
+    def to_string(self, sk):
         payload_string = json.dumps(self.to_json())
-        if not isinstance(vk, str):
-            vk = vk_to_str(vk)
         signature = sk.sign(payload_string)
         j = {
             'payload_string': payload_string,
             'signature': signature,
-            'vk': vk
+            'vk': sk.verifying_key
         }
         return json.dumps(j)
 
