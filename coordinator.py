@@ -1,5 +1,6 @@
 import struct
 import socket
+import secrets
 import threading
 from messages import *
 
@@ -18,6 +19,9 @@ class Coordinator:
         self.s.bind((ip, listening_port))
         self.s.listen(5)
 
+        self.replicaslock = threading.Lock() # makes sure replicas[] is not modified
+
+    def start(self):
         while True:
             (clientsocket, address) = self.s.accept()
             t = threading.Thread(target=self.client_thread, args=(self,clientsocket,))
@@ -33,10 +37,12 @@ class Coordinator:
             
             if msg.TYPE == "peerinfo": # this is a new peer
                 # sends prev replicas to this one
+                self.replicaslock.acquire()
                 for vk, r in self.replicas.items():
                     pinfo = PeerInfo(vk, r["ip"], r["port"])
                     pinfo.send_with_tcp(c)
-                self.replicas[msg.vk] = {"ip":msg.ip, "port":msg.port, "debugsocket":c, "debugthread":t}                
+                self.replicas[msg.vk] = {"ip":msg.ip, "port":msg.port, "debugsocket":c, "debugthread":t}
+                self.replicaslock.release()                
                 # tell new node that is all we have by sending his info back
                 msg.send_with_tcp(c)
                 # now let older replicas know of the new one
@@ -47,7 +53,18 @@ class Coordinator:
                 pass
 
     def spread_new_replica(self, msg):
+        self.replicaslock.acquire()
         for vk, rep in self.replicas.items():
             if vk != msg.vk:
                 s = rep["debugsocket"]
                 msg.send_with_tcp(s)
+        self.replicaslock.release()
+
+    # picks a random replica and tells it to try to propagate this value
+    def random_propagate(self, value):
+        value = str(value)
+        who = secrets.choice(list(self.replicas.keys()))
+        debugprint("Coordinator telling " + who + " to propagate " + value)
+        msg = ControllerPropagateMessage(value)
+        msg.send_with_tcp(self.replicas[who]["debugsocket"])
+

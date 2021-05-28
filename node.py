@@ -16,7 +16,7 @@ class Node:
     def __init__(self, host, port, server_ip, server_port, nodes=None):
         self.host, self.port = host, port
         self.server_ip, self.server_port = server_ip, server_port
-        self.nodes = {} # dict vk -> {ip, port, status}
+        self.nodes = nodes # dict vk -> {ip, port, status}
 
         self.sk = SigningKey.generate(curve=NIST256p)
         self.vk = self.sk.verifying_key
@@ -36,21 +36,6 @@ class Node:
 
         self.print_debug("init")
 
-        if nodes is None:
-            # receives other nodes' informations from coordinator
-            myinfo = PeerInfo(self.vk, host, port)
-            myinfo.send_with_tcp(debugsocket)
-            
-            msg = MessageNoSignature.recv_with_tcp(debugsocket)
-
-            while msg is not None and msg.TYPE == "peerinfo":
-                if msg.vk == myinfo.vk: # flag that we already got all peers
-                    break
-                self.nodes[msg.vk] = {"ip": msg.ip, "port": msg.port, "status":None}
-                self.print_debug("Got peer" + str(self.nodes[msg.vk]))
-                msg = MessageNoSignature.recv_with_tcp(debugsocket)
-                # TO DO: use key exchange for an ephemeral key with this peer
-
         self.ballot = 0
         self.value_to_propagate = None # may be updated by a prepared(b, v) message or by controller()
         self.leader = None
@@ -59,8 +44,6 @@ class Node:
         self.controller_thread = threading.Thread(target=self.controller)
 
         self.listen_log = [] # rotating log, updated by listen() and used by propagate
-
-        self.start()
 
     def print_debug(self, msg):
         msg = DebugInfo(self.vk, msg)
@@ -73,6 +56,8 @@ class Node:
     def controller(self): # TO DO
         while True:
             msg = MessageNoSignature.recv_with_tcp(self.debugsocket)
+            if msg is None:
+                break
             self.print_debug("rcv debug msg" + str(msg.to_json()))
             if msg.TYPE == "peerinfo":
                 if msg.vk not in self.nodes:
@@ -90,10 +75,28 @@ class Node:
     def propagate(self, value):
         # called by controller, uses listen_log to see which messages where received back
         self.ballot += 1
-        self.print_debug("Will propagate", value)
+        self.print_debug("Will propagate " + value + " using ballot " + str(ballot))
         return   
         
     def start(self):
+
+        if self.nodes is None:
+            # receives other nodes' informations from coordinator
+            myinfo = PeerInfo(self.vk, self.host, self.port)
+            myinfo.send_with_tcp(self.debugsocket)
+            
+            msg = MessageNoSignature.recv_with_tcp(self.debugsocket)
+
+            self.nodes = {}
+            while msg is not None and msg.TYPE == "peerinfo":
+                if msg.vk == myinfo.vk: # flag that we already got all peers
+                    break
+                self.nodes[msg.vk] = {"ip": msg.ip, "port": msg.port, "status":None}
+                self.print_debug("Got peer" + str(self.nodes[msg.vk]))
+                msg = MessageNoSignature.recv_with_tcp(self.debugsocket)
+                # TO DO: use key exchange for an ephemeral key with this peer
+
+
         self.listening_thread.start()
         self.controller_thread.start()        
 
