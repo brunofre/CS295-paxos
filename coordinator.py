@@ -37,12 +37,11 @@ class Coordinator:
             
             if msg.TYPE == "peerinfo": # this is a new peer
                 # sends prev replicas to this one
-                self.replicaslock.acquire()
+                self.replicaslock.acquire() # released in spread_new_replica below
                 for vk, r in self.replicas.items():
                     pinfo = PeerInfo(vk, r["ip"], r["port"])
                     pinfo.send_with_tcp(c)
                 self.replicas[msg.vk] = {"ip":msg.ip, "port":msg.port, "debugsocket":c, "debugthread":t}
-                self.replicaslock.release()                
                 # tell new node that is all we have by sending his info back
                 msg.send_with_tcp(c)
                 # now let older replicas know of the new one
@@ -53,7 +52,6 @@ class Coordinator:
                 pass
 
     def spread_new_replica(self, msg):
-        self.replicaslock.acquire()
         for vk, rep in self.replicas.items():
             if vk != msg.vk:
                 s = rep["debugsocket"]
