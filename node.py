@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import socket
+import random
 import time
 import socketserver
 import time
@@ -19,7 +20,7 @@ class Node:
         self.nodes = nodes # dict vk -> {ip, port, status}
 
         self.sk = SigningKey.generate(curve=NIST256p)
-        self.vk = self.sk.verifying_key
+        self.vk = vk_to_str(self.sk.verifying_key)
 
         # connects to coordinator to get nodes and handle debugging
         debugsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -37,7 +38,9 @@ class Node:
         self.print_debug("init")
 
         self.ballot = 0
-        self.value_to_propagate = None # may be updated by a prepared(b, v) message or by controller()
+        self.prepared_value = None # contains the prepared value, if any
+
+        #self.value_to_propagate = None # may be updated by controller()
     
         self.listening_thread = threading.Thread(target=self.listen)
         self.stop_listen = False
@@ -60,30 +63,33 @@ class Node:
         while not self.stop_listen:
             msg = Message.recv_with_udp(s)
             self.print_debug("rcv node msg " + str(msg.to_json()))
-            if msg.TYPE == "prepare":
-                if msg.ballot > self.ballot:
-                    self.stop_propagate = True
-                    self.nodes[msg.vk]["status"] = "leader"
-                    self.ballot = msg.ballot
-                    fromnode = self.nodes[msg.vk]
-                    preparedmsg = PreparedMessage(msg.ballot, self.value_to_propagate)
-                    preparedmsg.send_with_udp(fromnode["ip"], fromnode["port"])
-                else:
-                    pass
-            elif msg.TYPE == "propose":
-                pass
-            elif msg.TYPE == "accept":
-                pass
-            # the remaining need only to modify listen_log for the propagate_thread to use it
+
+            if msg.ballot < self.ballot:
+                    self.print_debug("older ballot, we are at " + str(self.ballot))
+                    # to do: send Nack
             else:
-                self.listen_log_lock.acquire()
-                if msg.TYPE == "proposed":
-                    pass
-                elif msg.TYPE == "prepared":
-                    pass
-                elif msg.TYPE == "accepted":
-                    pass
-                self.listen_log_lock.release()
+                fromnode = self.nodes[msg.vk]
+                if msg.TYPE == "prepare":
+                    self.stop_propagate = True
+                    self.leader = msg.vk
+                    fromnode = self.nodes[msg.vk]
+                    preparedmsg = PreparedMessage(self.ballot, self.prepared_value)
+                    preparedmsg.send_with_udp(fromnode["ip"], fromnode["port"])
+                    self.ballot = msg.ballot
+                elif msg.TYPE == "propose":
+                    if self.leader == msg.vk:
+                        self.stop_propagate = True
+                        self.prepared_value = msg.value
+                        acceptmsg = AcceptMessage(msg.ballot)
+                        acceptmsg.send_with_udp(fromnode["ip"], fromnode["port"])
+                        self.ballot = msg.ballot
+                # prepared/accept need only to modify listen_log for the propagate_thread to use it
+                else:
+                    self.listen_log_lock.acquire()
+                    if msg.TYPE == "prepared" or msg.TYPE == "accept":
+                        if self.propagate_thread is not None: # otherwise we are not propagating, ignore it
+                            self.listen_log.append(msg)
+                    self.listen_log_lock.release()
 
         s.close()
 
@@ -105,13 +111,72 @@ class Node:
                 self.propagate_thread.start()
             elif msg.TYPE == "exit":
                 break
+            elif msg.TYPE == "done":
+                break
 
     def propagate(self, value):
-        # called by controller, uses listen_log to see which messages where received back
+
         self.stop_propagate = False
+        self.leader = self.vk
+
         self.ballot += 1
-        self.print_debug("Will propagate " + value + " using ballot " + str(ballot))
-        return   
+        ballot = self.ballot
+
+        # clean up so we don't take older messages as acceptances
+        time.sleep(1)
+        self.listen_log_lock.acquire()
+        listen_log = []
+        self.listen_log_lock.release()
+
+        original_value = value 
+
+        self.print_debug("Starting propagate of " + value + " using ballot " + str(ballot))
+
+        while not self.stop_propagate:    
+
+            value = original_value # if propagate fails (i.e. no majority) we restart with original value
+            keys = random.sample(self.nodes.keys(), len(self.nodes)) # randomize key order
+            prepared_keys = []  # peers that returned prepared msg
+            prepared_ballot = 0 # highest ballot from a prepared msg recv
+            accept_keys = []    # peers that accepted our propose()
+
+            preparemsg = PrepareMessage(ballot)
+            for k in keys:
+                target = self.nodes[k]
+                preparemsg.send_with_udp(target["ip"], target["port"])
+            time.sleep(1) # TO DO: better method here?? we just hope it works in 1sec
+            self.listen_log_lock.acquire()
+            for msg in self.listen_log:
+                if msg.TYPE == "prepared":
+                    if msg.value is not None and msg.ballot > prepared_ballot:
+                        value = msg.value # we need the value with highest ballot
+                        prepared_ballot = msg.ballot
+                    prepared_keys.append(msg.vk)
+            self.listen_log = []
+            self.listen_log_lock.release() # free it to get the accepts below back
+            if self.stop_propagate:
+                break
+            elif len(prepared_keys) + 1 > (len(self.nodes)+1)/2:
+                # we got majority, lets try to propose the value
+                self.print_debug("Prepared succesful, value is " + str(value))
+                proposemsg = ProposeMessage(ballot, value)
+                for k in prepared_keys:
+                    target = self.nodes[k]
+                    proposemsg.send_with_udp(target["ip"], target["port"])
+                time.sleep(1) # TO DO: better method here?? we just hope it works in 1sec
+                self.listen_log_lock.acquire()
+                for  msg in self.listen_log:
+                    if msg.TYPE == "accept" and msg.ballot == ballot:
+                        accept_keys.append(msg.vk)
+                self.listen_log = []
+                self.listen_log_lock.release()
+                if len(accept_keys) + 1 > (len(self.nodes)+1)/2:
+                    self.print_debug("Succesfully propagated value " + str(value))
+                    # TO DO: should stop paxos here, make a PaxosDoneMessage type and send it to coordinator, that sends it to other nodes
+                else:
+                    self.print_debug("Didn't get enough accepts: " + str(len(accept_keys)) + ", trying again")
+            else:
+                self.print_debug("Prepare phase failed with only " + str(len(prepared_keys)) + " extra nodes, trying again")
         
     def start(self):
 

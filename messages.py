@@ -177,7 +177,7 @@ class PreparedMessage(Message):
             'ballot': self.ballot,
             'value': self.value
         }
-        
+
     @classmethod
     def from_json(cls, j):
         ballot = j['ballot']
