@@ -64,9 +64,10 @@ class Node:
             msg = Message.recv_with_udp(s)
             self.print_debug("rcv node msg " + str(msg.to_json()))
 
-            if msg.ballot < self.ballot:
-                    self.print_debug("older ballot, we are at " + str(self.ballot))
-                    # to do: send Nack
+            if msg.TYPE != "prepared" and msg.ballot < self.ballot:
+                # node prepared msg can have lower ballot
+                self.print_debug("older ballot, we are at " + str(self.ballot))
+                # to do: send Nack so nodes stop bothering us with lower ballot stuff?
             else:
                 fromnode = self.nodes[msg.vk]
                 if msg.TYPE == "prepare":
