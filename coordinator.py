@@ -33,7 +33,7 @@ class Coordinator:
     def client_thread(self, t, c):
 
         while True:
-            msg = CoordinatorMessage.recv_with_tcp(c)
+            msg = CoordinatorMessage.receive(c)
             if msg is None:
                 c.close()
                 break
@@ -43,7 +43,7 @@ class Coordinator:
                 self.replicaslock.acquire()  # released in spread_new_replica below
                 for vk, r in self.replicas.items():
                     pinfo = PeerInfo(vk, r["ip"], r["port"])
-                    pinfo.send_with_tcp(c)
+                    pinfo.send(c)
                 self.replicas[msg.vk] = {
                     "ip": msg.ip, "port": msg.port, "debugsocket": c, "debugthread": t}
                 # tell new node that is all we have by sending his info back
@@ -69,4 +69,4 @@ class Coordinator:
         debugprint("Coordinator telling " + who + " to propagate " + value)
         msg = ControllerPropagateMessage(value)
         #msg = ControllerExitCommand()
-        msg.send_with_tcp(self.replicas[who]["debugsocket"])
+        msg.send(self.replicas[who]["debugsocket"])

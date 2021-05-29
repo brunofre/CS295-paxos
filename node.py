@@ -57,7 +57,7 @@ class Node:
 
     def print_debug(self, msg):
         msg = DebugInfo(self.vk, msg)
-        msg.send_with_tcp(self.debugsocket)
+        msg.send(self.debugsocket)
 
     def listen(self):
 
@@ -67,7 +67,7 @@ class Node:
         self.listen_socket = s
 
         while not self.stop_listen:
-            msg = Message.recv_with_udp(s)
+            msg = Message.receive(s)
             self.print_debug("rcv node msg " + str(msg.to_json()))
 
             if msg.TYPE != PreparedMessage.TYPE and msg.ballot < self.ballot:
@@ -82,7 +82,7 @@ class Node:
                     fromnode = self.nodes[msg.vk]
                     preparedmsg = PreparedMessage(
                         self.ballot, self.prepared_value)
-                    preparedmsg.send_with_udp(
+                    preparedmsg.send(
                         self.sk, fromnode["ip"], fromnode["port"])
                     self.ballot = msg.ballot
                 elif msg.TYPE == ProposeMessage.TYPE:
@@ -90,7 +90,7 @@ class Node:
                         self.stop_propagate = True
                         self.prepared_value = msg.value
                         acceptmsg = AcceptMessage(msg.ballot)
-                        acceptmsg.send_with_udp(
+                        acceptmsg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
@@ -105,7 +105,7 @@ class Node:
 
     def controller(self):
         while True:
-            msg = CoordinatorMessage.recv_with_tcp(self.debugsocket)
+            msg = CoordinatorMessage.receive(self.debugsocket)
             if msg is None:
                 break
             self.print_debug("rcv debug msg" + str(msg.to_json()))
@@ -166,7 +166,7 @@ class Node:
             preparemsg = PrepareMessage(ballot)
             for k in keys:
                 target = self.nodes[k]
-                preparemsg.send_with_udp(self.sk, target["ip"], target["port"])
+                preparemsg.send(self.sk, target["ip"], target["port"])
             # TO DO: better method here?? we just hope it works in 1sec
             time.sleep(1)
             self.listen_log_lock.acquire()
@@ -186,7 +186,7 @@ class Node:
                 proposemsg = ProposeMessage(ballot, value)
                 for k in prepared_keys:
                     target = self.nodes[k]
-                    proposemsg.send_with_udp(
+                    proposemsg.send(
                         self.sk, target["ip"], target["port"])
                 # TO DO: better method here?? we just hope it works in 1sec
                 time.sleep(1)
@@ -213,9 +213,9 @@ class Node:
         if self.nodes is None:
             # receives other nodes' informations from coordinator
             myinfo = PeerInfo(self.vk, self.host, self.port)
-            myinfo.send_with_tcp(self.debugsocket)
+            myinfo.send(self.debugsocket)
 
-            msg = CoordinatorMessage.recv_with_tcp(self.debugsocket)
+            msg = CoordinatorMessage.receive(self.debugsocket)
 
             self.nodes = {}
             while msg is not None and msg.TYPE == PeerInfo.TYPE:
@@ -224,7 +224,7 @@ class Node:
                 self.nodes[msg.vk] = {"ip": msg.ip,
                                       "port": msg.port, "status": None}
                 self.print_debug("Got peer" + str(self.nodes[msg.vk]))
-                msg = CoordinatorMessage.recv_with_tcp(self.debugsocket)
+                msg = CoordinatorMessage.receive(self.debugsocket)
                 # TO DO: use key exchange for an ephemeral key with this peer
 
         self.listening_thread.start()

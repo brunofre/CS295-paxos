@@ -101,12 +101,12 @@ class Message:
         }
         return json.dumps(j)
 
-    def send_with_udp(self, sk, target_ip, target_port):
+    def send(self, sk, target_ip, target_port):
         msg = self.to_string(sk)
         udp_send_msg(target_ip, target_port, msg)
 
     @classmethod
-    def recv_with_udp(cls, sock):
+    def receive(cls, sock):
         msg = udp_recv_msg(sock)
         if msg is None:
             return None
@@ -141,12 +141,12 @@ class CoordinatorMessage:
     def from_string(cls, msg):
         return cls.msg_handler(msg)
 
-    def send_with_tcp(self, sock):
+    def send(self, sock):
         msg = self.to_string()
         tcp_send_msg(sock, msg)
 
     @classmethod
-    def recv_with_tcp(cls, sock):
+    def receive(cls, sock):
         msg = tcp_recv_msg(sock)
         if msg is None:
             return None
