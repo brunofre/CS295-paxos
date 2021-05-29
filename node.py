@@ -24,20 +24,20 @@ class Node:
         self.vk = vk_to_str(self.sk.verifying_key)
 
         # connects to coordinator to get nodes and handle debugging
-        debugsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        debugsocket.connect((self.server_ip, self.server_port))
+        debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        debug_socket.connect((self.server_ip, self.server_port))
 
         # keep debug socket alive
-        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        debugsocket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        debug_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        debug_socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         if not sys.platform.startswith('darwin'):
-            debugsocket.setsockopt(
+            debug_socket.setsockopt(
                 socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 10 * 60)
-        debugsocket.setsockopt(
+        debug_socket.setsockopt(
             socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5 * 60)
-        debugsocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)
+        debug_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 10)
 
-        self.debugsocket = debugsocket
+        self.debug_socket = debug_socket
 
         self.print_debug("init")
 
@@ -57,7 +57,7 @@ class Node:
 
     def print_debug(self, msg):
         msg = DebugInfo(self.vk, msg)
-        msg.send(self.debugsocket)
+        msg.send(self.debug_socket)
 
     def listen(self):
 
@@ -105,7 +105,7 @@ class Node:
 
     def coordinator(self):
         while True:
-            msg = CoordinatorMessage.receive(self.debugsocket)
+            msg = CoordinatorMessage.receive(self.debug_socket)
             if msg is None:
                 break
             self.print_debug("rcv debug msg" + str(msg.to_json()))
@@ -129,7 +129,7 @@ class Node:
                 break
             elif msg.TYPE == "done":
                 break
-        self.debugsocket.close()
+        self.debug_socket.close()
 
     def propagate(self, value):
 
@@ -213,9 +213,9 @@ class Node:
         if self.nodes is None:
             # receives other nodes' informations from coordinator
             myinfo = PeerInfo(self.vk, self.host, self.port)
-            myinfo.send(self.debugsocket)
+            myinfo.send(self.debug_socket)
 
-            msg = CoordinatorMessage.receive(self.debugsocket)
+            msg = CoordinatorMessage.receive(self.debug_socket)
 
             self.nodes = {}
             while msg is not None and msg.TYPE == PeerInfo.TYPE:
@@ -224,7 +224,7 @@ class Node:
                 self.nodes[msg.vk] = {"ip": msg.ip,
                                       "port": msg.port, "status": None}
                 self.print_debug("Got peer" + str(self.nodes[msg.vk]))
-                msg = CoordinatorMessage.receive(self.debugsocket)
+                msg = CoordinatorMessage.receive(self.debug_socket)
                 # TO DO: use key exchange for an ephemeral key with this peer
 
         self.listening_thread.start()

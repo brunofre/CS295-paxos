@@ -11,7 +11,7 @@ def debugprint(msg):
 
 class Coordinator:
 
-    # each replica is a pubkey -> {ip, port, debugsocket} where port is UDP and socket is TCP
+    # each replica is a pubkey -> {ip, port, debug_socket} where port is UDP and socket is TCP
     replicas = {}
 
     def __init__(self, ip, listening_port):
@@ -45,7 +45,7 @@ class Coordinator:
                     pinfo = PeerInfo(vk, r["ip"], r["port"])
                     pinfo.send(c)
                 self.replicas[msg.vk] = {
-                    "ip": msg.ip, "port": msg.port, "debugsocket": c, "debugthread": t}
+                    "ip": msg.ip, "port": msg.port, "debug_socket": c, "debugthread": t}
                 # tell new node that is all we have by sending his info back
                 msg.send_with_tcp(c)
                 # now let older replicas know of the new one
@@ -58,7 +58,7 @@ class Coordinator:
     def spread_new_replica(self, msg):
         for vk, rep in self.replicas.items():
             if vk != msg.vk:
-                s = rep["debugsocket"]
+                s = rep["debug_socket"]
                 msg.send_with_tcp(s)
         self.replicaslock.release()
 
@@ -69,4 +69,4 @@ class Coordinator:
         debugprint("Coordinator telling " + who + " to propagate " + value)
         msg = CoordinatorPropagateMessage(value)
         #msg = CoordinatorExitCommand()
-        msg.send(self.replicas[who]["debugsocket"])
+        msg.send(self.replicas[who]["debug_socket"])
