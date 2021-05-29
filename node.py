@@ -15,9 +15,9 @@ from ecdsa import SigningKey
 
 
 class Node:
-    def __init__(self, host, port, server_ip, server_port, nodes=None):
+    def __init__(self, host, port, coordinator_ip, coordinator_port, nodes=None):
         self.host, self.port = host, port
-        self.server_ip, self.server_port = server_ip, server_port
+        self.coordinator_ip, self.coordinator_port = coordinator_ip, coordinator_port
         self.nodes = nodes  # dict vk -> {ip, port, status}
 
         self.sk = SigningKey.generate(curve=NIST256p)
@@ -25,7 +25,7 @@ class Node:
 
         # connects to coordinator to get nodes and handle debugging
         debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        debug_socket.connect((self.server_ip, self.server_port))
+        debug_socket.connect((self.coordinator_ip, self.coordinator_port))
 
         # keep debug socket alive
         debug_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
