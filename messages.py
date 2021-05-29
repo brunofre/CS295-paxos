@@ -5,11 +5,12 @@ import base64
 from ecdsa.curves import NIST256p
 from ecdsa.keys import VerifyingKey
 
-############# HELPERS
+# HELPERS
+
 
 def tcp_send_msg(sock, msg):
     if isinstance(msg, str):
-        msg = msg.encode("utf-8")
+        msg = msg.encode()
     msg = struct.pack('>I', len(msg)) + msg
     return sock.sendall(msg)
 
@@ -22,18 +23,21 @@ def tcp_recv_msg(sock):
     r = sock.recvfrom(msglen)
     if len(r[0]) != msglen:
         return None
-    return {"data": r[0].decode("utf-8"), "from": r[1]}
+    return {"data": r[0].decode(), "from": r[1]}
+
 
 def udp_send_msg(ip, port, msg):
     if isinstance(msg, str):
-        msg = msg.encode("utf-8")
+        msg = msg.encode()
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.sendto(msg, (ip, port))
     s.close()
 
+
 def udp_recv_msg(sock):
     r = sock.recv(4096)
-    return r.decode("utf-8")
+    return r.decode()
+
 
 def vk_to_str(vk):
     return vk.to_string().hex()
@@ -67,7 +71,7 @@ class Message:
         signature = bytes.fromhex(j['signature'])
         vk = j['vk']
 
-        assert str_to_vk(vk).verify(signature, payload_string.encode("utf-8"))
+        assert str_to_vk(vk).verify(signature, payload_string.encode())
         payload = json.loads(payload_string)
 
         TYPES = {PrepareMessage, PreparedMessage,
@@ -84,12 +88,12 @@ class Message:
     @classmethod
     def from_string(cls, message):
         if isinstance(message, bytes):
-            message = message.decode("utf-8")
+            message = message.decode()
         return cls.msg_handler(message)
 
     def to_string(self, sk):
         payload_string = json.dumps(self.to_json())
-        signature = sk.sign(payload_string.encode("utf-8")).hex()
+        signature = sk.sign(payload_string.encode()).hex()
         j = {
             'payload_string': payload_string,
             'signature': signature,
@@ -124,9 +128,9 @@ class CoordinatorMessage:
     @staticmethod
     def msg_handler(msg):
         if isinstance(msg, bytes):
-            msg = msg.decode("utf-8")
+            msg = msg.decode()
         TYPES = {PeerInfo, DebugInfo,
-                ControllerExitCommand, ControllerPropagateMessage}
+                 ControllerExitCommand, ControllerPropagateMessage}
         for msgtype in TYPES:
             if msgtype.is_valid(msg):
                 j = json.loads(msg)
@@ -188,7 +192,6 @@ class PreparedMessage(Message):
         ballot = j['ballot']
         value = j['value']
         return cls(ballot, value)
-
 
 
 class ProposeMessage(Message):
