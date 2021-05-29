@@ -76,7 +76,7 @@ class Message:
         for msgtype in TYPES:
             if msgtype.is_valid(payload_string):
                 msg = msgtype.from_json(payload)
-        
+
         assert msg is not None
         msg.vk = vk
         return msg
@@ -109,7 +109,7 @@ class Message:
         return cls.msg_handler(msg)
 
 
-class MessageNoSignature:
+class CoordinatorMessage:
 
     TYPE = None
 
@@ -232,7 +232,7 @@ class AcceptMessage(Message):
         return cls(ballot)
 
 
-class PeerInfo(MessageNoSignature):
+class PeerInfo(CoordinatorMessage):
 
     TYPE = 'peerinfo'
 
@@ -259,7 +259,7 @@ class PeerInfo(MessageNoSignature):
         return cls(vk, ip, port)
 
 
-class DebugInfo(MessageNoSignature):
+class DebugInfo(CoordinatorMessage):
 
     TYPE = 'debug'
 
@@ -283,7 +283,7 @@ class DebugInfo(MessageNoSignature):
         return cls(vk, msg)
 
 
-class ControllerExitCommand(MessageNoSignature):
+class ControllerExitCommand(CoordinatorMessage):
 
     TYPE = 'exit'
 
@@ -300,7 +300,7 @@ class ControllerExitCommand(MessageNoSignature):
         return cls()
 
 
-class ControllerPropagateMessage(MessageNoSignature):
+class ControllerPropagateMessage(CoordinatorMessage):
 
     TYPE = 'propagate'
 

@@ -105,7 +105,7 @@ class Node:
 
     def controller(self):
         while True:
-            msg = MessageNoSignature.recv_with_tcp(self.debugsocket)
+            msg = CoordinatorMessage.recv_with_tcp(self.debugsocket)
             if msg is None:
                 break
             self.print_debug("rcv debug msg" + str(msg.to_json()))
@@ -215,7 +215,7 @@ class Node:
             myinfo = PeerInfo(self.vk, self.host, self.port)
             myinfo.send_with_tcp(self.debugsocket)
 
-            msg = MessageNoSignature.recv_with_tcp(self.debugsocket)
+            msg = CoordinatorMessage.recv_with_tcp(self.debugsocket)
 
             self.nodes = {}
             while msg is not None and msg.TYPE == "peerinfo":
@@ -224,7 +224,7 @@ class Node:
                 self.nodes[msg.vk] = {"ip": msg.ip,
                                       "port": msg.port, "status": None}
                 self.print_debug("Got peer" + str(self.nodes[msg.vk]))
-                msg = MessageNoSignature.recv_with_tcp(self.debugsocket)
+                msg = CoordinatorMessage.recv_with_tcp(self.debugsocket)
                 # TO DO: use key exchange for an ephemeral key with this peer
 
         self.listening_thread.start()
