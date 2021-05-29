@@ -102,7 +102,6 @@ class Node:
             if msg is None:
                 break
             self.print_debug("rcv debug msg" + str(msg.to_json()))
-            print("lul")
             time.sleep(1)
             if msg.TYPE == "peerinfo":
                 if msg.vk not in self.nodes:

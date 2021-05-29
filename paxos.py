@@ -10,6 +10,15 @@ parser = argparse.ArgumentParser(prog='Paxos 101')
 
 args = parser.parse_args()
 
+def attack_on_consistency():
+    # create the coord,
+    # create two normal replicas
+    # create the malicious
+    # run it
+    pass
+
+def attack_on_liveness():
+    pass
 
 if __name__ == "__main__":
     print("Starting debugging")
