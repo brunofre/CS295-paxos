@@ -76,7 +76,7 @@ class Node:
                 # to do: send Nack so nodes stop bothering us with lower ballot stuff?
             else:
                 fromnode = self.nodes[msg.vk]
-                if msg.TYPE == PreparedMessage.TYPE:
+                if msg.TYPE == PrepareMessage.TYPE:
                     self.stop_propagate = True
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
