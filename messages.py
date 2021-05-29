@@ -5,11 +5,12 @@ import base64
 from ecdsa.curves import NIST256p
 from ecdsa.keys import VerifyingKey
 
-############# HELPERS
+# HELPERS
+
 
 def tcp_send_msg(sock, msg):
     if isinstance(msg, str):
-        msg = msg.encode("utf-8")
+        msg = msg.encode()
     msg = struct.pack('>I', len(msg)) + msg
     return sock.sendall(msg)
 
@@ -22,18 +23,21 @@ def tcp_recv_msg(sock):
     r = sock.recvfrom(msglen)
     if len(r[0]) != msglen:
         return None
-    return {"data": r[0].decode("utf-8"), "from": r[1]}
+    return {"data": r[0].decode(), "from": r[1]}
+
 
 def udp_send_msg(ip, port, msg):
     if isinstance(msg, str):
-        msg = msg.encode("utf-8")
+        msg = msg.encode()
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.sendto(msg, (ip, port))
     s.close()
 
+
 def udp_recv_msg(sock):
     r = sock.recv(4096)
-    return r.decode("utf-8")
+    return r.decode()
+
 
 def vk_to_str(vk):
     return vk.to_string().hex()
@@ -67,7 +71,7 @@ class Message:
         signature = bytes.fromhex(j['signature'])
         vk = j['vk']
 
-        assert str_to_vk(vk).verify(signature, payload_string.encode("utf-8"))
+        assert str_to_vk(vk).verify(signature, payload_string.encode())
         payload = json.loads(payload_string)
 
         TYPES = {PrepareMessage, PreparedMessage,
@@ -76,7 +80,7 @@ class Message:
         for msgtype in TYPES:
             if msgtype.is_valid(payload_string):
                 msg = msgtype.from_json(payload)
-        
+
         assert msg is not None
         msg.vk = vk
         return msg
@@ -84,12 +88,12 @@ class Message:
     @classmethod
     def from_string(cls, message):
         if isinstance(message, bytes):
-            message = message.decode("utf-8")
+            message = message.decode()
         return cls.msg_handler(message)
 
     def to_string(self, sk):
         payload_string = json.dumps(self.to_json())
-        signature = sk.sign(payload_string.encode("utf-8")).hex()
+        signature = sk.sign(payload_string.encode()).hex()
         j = {
             'payload_string': payload_string,
             'signature': signature,
@@ -97,19 +101,19 @@ class Message:
         }
         return json.dumps(j)
 
-    def send_with_udp(self, sk, target_ip, target_port):
+    def send(self, sk, target_ip, target_port):
         msg = self.to_string(sk)
         udp_send_msg(target_ip, target_port, msg)
 
     @classmethod
-    def recv_with_udp(cls, sock):
+    def receive(cls, sock):
         msg = udp_recv_msg(sock)
         if msg is None:
             return None
         return cls.msg_handler(msg)
 
 
-class MessageNoSignature:
+class CoordinatorMessage:
 
     TYPE = None
 
@@ -124,9 +128,9 @@ class MessageNoSignature:
     @staticmethod
     def msg_handler(msg):
         if isinstance(msg, bytes):
-            msg = msg.decode("utf-8")
+            msg = msg.decode()
         TYPES = {PeerInfo, DebugInfo,
-                ControllerExitCommand, ControllerPropagateMessage}
+                 CoordinatorExitCommand, CoordinatorPropagateMessage}
         for msgtype in TYPES:
             if msgtype.is_valid(msg):
                 j = json.loads(msg)
@@ -137,12 +141,12 @@ class MessageNoSignature:
     def from_string(cls, msg):
         return cls.msg_handler(msg)
 
-    def send_with_tcp(self, sock):
+    def send(self, sock):
         msg = self.to_string()
         tcp_send_msg(sock, msg)
 
     @classmethod
-    def recv_with_tcp(cls, sock):
+    def receive(cls, sock):
         msg = tcp_recv_msg(sock)
         if msg is None:
             return None
@@ -190,7 +194,6 @@ class PreparedMessage(Message):
         return cls(ballot, value)
 
 
-
 class ProposeMessage(Message):
 
     TYPE = 'propose'
@@ -232,7 +235,7 @@ class AcceptMessage(Message):
         return cls(ballot)
 
 
-class PeerInfo(MessageNoSignature):
+class PeerInfo(CoordinatorMessage):
 
     TYPE = 'peerinfo'
 
@@ -259,7 +262,7 @@ class PeerInfo(MessageNoSignature):
         return cls(vk, ip, port)
 
 
-class DebugInfo(MessageNoSignature):
+class DebugInfo(CoordinatorMessage):
 
     TYPE = 'debug'
 
@@ -283,7 +286,7 @@ class DebugInfo(MessageNoSignature):
         return cls(vk, msg)
 
 
-class ControllerExitCommand(MessageNoSignature):
+class CoordinatorExitCommand(CoordinatorMessage):
 
     TYPE = 'exit'
 
@@ -300,7 +303,7 @@ class ControllerExitCommand(MessageNoSignature):
         return cls()
 
 
-class ControllerPropagateMessage(MessageNoSignature):
+class CoordinatorPropagateMessage(CoordinatorMessage):
 
     TYPE = 'propagate'
 
