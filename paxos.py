@@ -42,12 +42,14 @@ if __name__ == "__main__":
         t.setDaemon(True)
         t.start()
 
-    time.sleep(1)
+    time.sleep(3)
 
-    value = input("Enter value to propagate:")
-    coord.random_propagate(value)
-
-    input("")
+    pos = None
+    while pos != "stop":
+        pos = input("Enter pos to propagate:")
+        value = input("Enter value to propagate:")
+        coord.random_propagate(pos, value)
+        time.sleep(5)
     # to do: get user input
 
     # for x in threads:

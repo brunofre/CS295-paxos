@@ -5,7 +5,7 @@ import threading
 from messages import *
 
 
-def debugprint(msg):
+def print_debug(msg):
     print("DEBUG:", msg)
 
 
@@ -47,11 +47,11 @@ class Coordinator:
                 self.replicas[msg.vk] = {
                     "ip": msg.ip, "port": msg.port, "debug_socket": c, "debugthread": t}
                 # tell new node that is all we have by sending his info back
-                msg.send_with_tcp(c)
+                msg.send(c)
                 # now let older replicas know of the new one
                 self.spread_new_replica(msg)
             elif msg.TYPE == DebugInfo.TYPE:  # just a debug message, print it
-                debugprint(msg.vk[:10] + " " + msg.msg)
+                print_debug(msg.vk[:10] + " " + msg.msg)
             else:
                 pass
 
@@ -59,14 +59,12 @@ class Coordinator:
         for vk, rep in self.replicas.items():
             if vk != msg.vk:
                 s = rep["debug_socket"]
-                msg.send_with_tcp(s)
+                msg.send(s)
         self.replicaslock.release()
 
     # picks a random replica and tells it to try to propagate this value
-    def random_propagate(self, value):
-        value = str(value)
+    def random_propagate(self, pos, value):
         who = random.choice(list(self.replicas.keys()))
-        debugprint("Coordinator telling " + who + " to propagate " + value)
-        msg = CoordinatorPropagateMessage(value)
-        #msg = CoordinatorExitCommand()
+        print_debug(f"Coordinator telling {who} to propagate {value} at pos {pos}")
+        msg = CoordinatorPropagateMessage(pos, value)
         msg.send(self.replicas[who]["debug_socket"])
