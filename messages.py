@@ -130,7 +130,7 @@ class CoordinatorMessage:
         if isinstance(msg, bytes):
             msg = msg.decode()
         TYPES = {PeerInfo, DebugInfo,
-                 ControllerExitCommand, ControllerPropagateMessage}
+                 CoordinatorExitCommand, CoordinatorPropagateMessage}
         for msgtype in TYPES:
             if msgtype.is_valid(msg):
                 j = json.loads(msg)
@@ -286,7 +286,7 @@ class DebugInfo(CoordinatorMessage):
         return cls(vk, msg)
 
 
-class ControllerExitCommand(CoordinatorMessage):
+class CoordinatorExitCommand(CoordinatorMessage):
 
     TYPE = 'exit'
 
@@ -303,7 +303,7 @@ class ControllerExitCommand(CoordinatorMessage):
         return cls()
 
 
-class ControllerPropagateMessage(CoordinatorMessage):
+class CoordinatorPropagateMessage(CoordinatorMessage):
 
     TYPE = 'propagate'
 

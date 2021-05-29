@@ -44,13 +44,13 @@ class Node:
         self.ballot = 0
         self.prepared_value = None  # contains the prepared value, if any
 
-        # self.value_to_propagate = None # may be updated by controller()
+        # self.value_to_propagate = None # may be updated by coordinator()
 
         self.propagate_thread = None
 
         self.listening_thread = threading.Thread(target=self.listen)
         self.stop_listen = False
-        self.controller_thread = threading.Thread(target=self.controller)
+        self.coordinator_thread = threading.Thread(target=self.coordinator)
 
         self.listen_log = []  # rotating log, updated by listen() and used by propagate
         self.listen_log_lock = threading.Lock()
@@ -103,7 +103,7 @@ class Node:
 
         s.close()
 
-    def controller(self):
+    def coordinator(self):
         while True:
             msg = CoordinatorMessage.receive(self.debugsocket)
             if msg is None:
@@ -116,7 +116,7 @@ class Node:
                     self.nodes[msg.vk] = {"ip": msg.ip,
                                           "port": msg.port, "status": None}
                     self.print_debug("Got peer" + str(self.nodes[msg.vk]))
-            elif msg.TYPE == ControllerPropagateMessage.TYPE:
+            elif msg.TYPE == CoordinatorPropagateMessage.TYPE:
                 if self.propagate_thread is not None:
                     self.print_debug("Stopping prev propagate thread")
                     # flag that tells propagate_thread to stop trying to propagate
@@ -125,7 +125,7 @@ class Node:
                 self.propagate_thread = threading.Thread(
                     target=self.propagate, args=(msg.value,))
                 self.propagate_thread.start()
-            elif msg.TYPE == ControllerExitCommand.TYPE:
+            elif msg.TYPE == CoordinatorExitCommand.TYPE:
                 break
             elif msg.TYPE == "done":
                 break
@@ -228,11 +228,11 @@ class Node:
                 # TO DO: use key exchange for an ephemeral key with this peer
 
         self.listening_thread.start()
-        self.controller_thread.start()
+        self.coordinator_thread.start()
 
     def stop(self):
         self.stop_propagate = True
         self.propagate_thread.join()
 
         self.listening_thread.join()  # kill these ??
-        self.controller_thread.join()
+        self.coordinator_thread.join()

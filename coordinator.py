@@ -68,5 +68,5 @@ class Coordinator:
         who = random.choice(list(self.replicas.keys()))
         debugprint("Coordinator telling " + who + " to propagate " + value)
         msg = CoordinatorPropagateMessage(value)
-        #msg = ControllerExitCommand()
+        #msg = CoordinatorExitCommand()
         msg.send(self.replicas[who]["debugsocket"])
