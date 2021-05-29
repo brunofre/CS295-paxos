@@ -2,6 +2,12 @@
 
 This is a paxos implementation for CS 295 Blockchain class.
 
+## Usage
+
+```
+python paxos.py
+```
+
 ## Structure
 
 
