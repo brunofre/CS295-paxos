@@ -38,7 +38,7 @@ class Coordinator:
                 c.close()
                 break
 
-            if msg.TYPE == "peerinfo":  # this is a new peer
+            if msg.TYPE == PeerInfo.TYPE:  # this is a new peer
                 # sends prev replicas to this one
                 self.replicaslock.acquire()  # released in spread_new_replica below
                 for vk, r in self.replicas.items():
@@ -50,7 +50,7 @@ class Coordinator:
                 msg.send_with_tcp(c)
                 # now let older replicas know of the new one
                 self.spread_new_replica(msg)
-            elif msg.TYPE == "debug":  # just a debug message, print it
+            elif msg.TYPE == DebugInfo.TYPE:  # just a debug message, print it
                 debugprint(msg.vk[:10] + " " + msg.msg)
             else:
                 pass

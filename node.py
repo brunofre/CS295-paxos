@@ -70,13 +70,13 @@ class Node:
             msg = Message.recv_with_udp(s)
             self.print_debug("rcv node msg " + str(msg.to_json()))
 
-            if msg.TYPE != "prepared" and msg.ballot < self.ballot:
+            if msg.TYPE != PreparedMessage.TYPE and msg.ballot < self.ballot:
                 # note prepared msg can have lower ballot
                 self.print_debug("older ballot, we are at " + str(self.ballot))
                 # to do: send Nack so nodes stop bothering us with lower ballot stuff?
             else:
                 fromnode = self.nodes[msg.vk]
-                if msg.TYPE == "prepare":
+                if msg.TYPE == PreparedMessage.TYPE:
                     self.stop_propagate = True
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
@@ -85,7 +85,7 @@ class Node:
                     preparedmsg.send_with_udp(
                         self.sk, fromnode["ip"], fromnode["port"])
                     self.ballot = msg.ballot
-                elif msg.TYPE == "propose":
+                elif msg.TYPE == ProposeMessage.TYPE:
                     if self.leader == msg.vk:
                         self.stop_propagate = True
                         self.prepared_value = msg.value
@@ -96,7 +96,7 @@ class Node:
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
                 else:
                     self.listen_log_lock.acquire()
-                    if msg.TYPE == "prepared" or msg.TYPE == "accept":
+                    if msg.TYPE == PreparedMessage.TYPE or msg.TYPE == AcceptMessage.TYPE:
                         if self.propagate_thread is not None:  # otherwise we are not propagating, ignore it
                             self.listen_log.append(msg)
                     self.listen_log_lock.release()
@@ -111,12 +111,12 @@ class Node:
             self.print_debug("rcv debug msg" + str(msg.to_json()))
             print("lul")
             time.sleep(1)
-            if msg.TYPE == "peerinfo":
+            if msg.TYPE == PeerInfo.TYPE:
                 if msg.vk not in self.nodes:
                     self.nodes[msg.vk] = {"ip": msg.ip,
                                           "port": msg.port, "status": None}
                     self.print_debug("Got peer" + str(self.nodes[msg.vk]))
-            elif msg.TYPE == "propagate":
+            elif msg.TYPE == ControllerPropagateMessage.TYPE:
                 if self.propagate_thread is not None:
                     self.print_debug("Stopping prev propagate thread")
                     # flag that tells propagate_thread to stop trying to propagate
@@ -125,7 +125,7 @@ class Node:
                 self.propagate_thread = threading.Thread(
                     target=self.propagate, args=(msg.value,))
                 self.propagate_thread.start()
-            elif msg.TYPE == "exit":
+            elif msg.TYPE == ControllerExitCommand.TYPE:
                 break
             elif msg.TYPE == "done":
                 break
@@ -171,7 +171,7 @@ class Node:
             time.sleep(1)
             self.listen_log_lock.acquire()
             for msg in self.listen_log:
-                if msg.TYPE == "prepared":
+                if msg.TYPE == PreparedMessage.TYPE:
                     if msg.value is not None and msg.ballot > prepared_ballot:
                         value = msg.value  # we need the value with highest ballot
                         prepared_ballot = msg.ballot
@@ -192,7 +192,7 @@ class Node:
                 time.sleep(1)
                 self.listen_log_lock.acquire()
                 for msg in self.listen_log:
-                    if msg.TYPE == "accept" and msg.ballot == ballot:
+                    if msg.TYPE == AcceptMessage.TYPE and msg.ballot == ballot:
                         accept_keys.append(msg.vk)
                 self.listen_log = []
                 self.listen_log_lock.release()
@@ -218,7 +218,7 @@ class Node:
             msg = CoordinatorMessage.recv_with_tcp(self.debugsocket)
 
             self.nodes = {}
-            while msg is not None and msg.TYPE == "peerinfo":
+            while msg is not None and msg.TYPE == PeerInfo.TYPE:
                 if msg.vk == myinfo.vk:  # flag that we already got all peers
                     break
                 self.nodes[msg.vk] = {"ip": msg.ip,
