@@ -32,6 +32,10 @@ python paxos.py
 
 ### Consistency
 
+* Problem:
+  1. malicious party send prepare message with ballot $b$ to all nodes.
+  2. malicious party send propose message with ballot $b$ and value $v_a$ to half of the nodes, $v_b$ to another half of the nodes.
+  3.
 
 
 ### Availability
@@ -55,4 +59,13 @@ python paxos.py
   * The majority should send the latest proposal back, so this attack cannot success.
 
 ### Propose phase
+
+* Problem: instead of sending a previously accepted value, malicous node send its own value with a higher ballot number.
+  * A honest node should reject any proposal which has different value than previously accept one.
+
+### Accept phase
+
+* Problem: malicious leader tells everyone his proposal is accepted  before he receive accept message from the majority.
+  * The inform message should include all accept messages.
+
 
