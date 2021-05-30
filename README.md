@@ -28,11 +28,11 @@ python paxos.py
 
 ## Malicious attack (CAP)
 
-
-
 ### Consistency
 
-* Problem: Assume there are $n = 2m + 1$ nodes. $2m$ of them are honest. There's no previous accepted proposal.
+#### Attack 1:
+
+Assume there are $2n + 1$ nodes. Except the malicious node $M$, all other nodes are honest. There's no previous accepted proposal.
   1. malicious party send prepare message with ballot $b$ to all nodes.
   2. After receiving $m$ prepared messages, malicious party send propose message with ballot $b$ and value $v_a$ to $m$ nodes, $v_b$ to another $m$ nodes.
   3. As a result, $m$ of the nodes accept $v_a$ and $m$ of the nodes accept $v_b$.
@@ -40,11 +40,22 @@ python paxos.py
 * Solution:
   * Nodes need to broadcast their status to other node as what PBFT does?
 
+
+
+
+
 ### Availability
 
+#### Attack 1:
 
+Assume there's a malicious node $M$. Everytime $M$ receives a prepare message $prepare(b)$, it always immediately sends a prepare message $prepare(b')$ with a $b' > b$ to all nodes and ignore the $prepared$ message. In this case, all other nodes will not respond to $prepare(b)$ since they have got $prepare(b')$.
+
+> Solution:
 
 ### Partition tolerance
+
+
+
 
 
 ### Prepare phase
