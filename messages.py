@@ -75,7 +75,7 @@ class Message:
         payload = json.loads(payload_string)
 
         TYPES = {PrepareMessage, PreparedMessage,
-                 ProposeMessage, AcceptMessage}
+                 ProposeMessage, AcceptMessage, CommitMessage}
 
         for msgtype in TYPES:
             if msgtype.is_valid(payload_string):
@@ -157,83 +157,110 @@ class PrepareMessage(Message):
 
     TYPE = 'prepare'
 
-    def __init__(self, ballot):
-        self.ballot = ballot
+    def __init__(self, pos, ballot):
+        self.pos, self.ballot = int(pos), ballot
 
     def to_json(self):
         return {
             'type': self.TYPE,
-            'ballot': self.ballot
+            'ballot': self.ballot,
+            'pos': self.pos
         }
 
     @classmethod
     def from_json(cls, j):
+        pos = j['pos']
         ballot = j['ballot']
-        return cls(ballot)
+        return cls(pos, ballot)
 
 
 class PreparedMessage(Message):
 
     TYPE = 'prepared'
 
-    def __init__(self, ballot, value):
-        self.ballot = ballot
+    def __init__(self, pos, ballot, value):
+        self.pos, self.ballot = int(pos), ballot
         self.value = value
 
     def to_json(self):
         return {
             'type': self.TYPE,
+            'pos': self.pos,
             'ballot': self.ballot,
             'value': self.value
         }
 
     @classmethod
     def from_json(cls, j):
+        pos = j['pos']
         ballot = j['ballot']
         value = j['value']
-        return cls(ballot, value)
+        return cls(pos, ballot, value)
 
 
 class ProposeMessage(Message):
 
     TYPE = 'propose'
 
-    def __init__(self, ballot, value):
-        self.ballot = ballot
+    def __init__(self, pos, ballot, value):
+        self.pos, self.ballot = int(pos), ballot
         self.value = value
 
     def to_json(self):
         return {
             'type': self.TYPE,
+            'pos': self.pos,
             'ballot': self.ballot,
             'value': self.value
         }
 
     @classmethod
     def from_json(cls, j):
+        pos = j['pos']
         ballot = j['ballot']
         value = j['value']
-        return cls(ballot, value)
+        return cls(pos, ballot, value)
 
 
 class AcceptMessage(Message):
 
     TYPE = 'accept'
 
-    def __init__(self, ballot):
-        self.ballot = ballot
+    def __init__(self, pos, ballot):
+        self.pos, self.ballot = int(pos), ballot
 
     def to_json(self):
         return {
             'type': self.TYPE,
+            'pos': self.pos,
             'ballot': self.ballot
         }
 
     @classmethod
     def from_json(cls, j):
+        pos = j['pos']
         ballot = j['ballot']
-        return cls(ballot)
+        return cls(pos, ballot)
 
+class CommitMessage(Message):
+
+    TYPE = 'commit'
+
+    def __init__(self, pos, value):
+        self.pos, self.value = int(pos), value
+
+    def to_json(self):
+        return {
+            'type': self.TYPE,
+            'pos': self.pos,
+            'value': self.value
+        }
+
+    @classmethod
+    def from_json(cls, j):
+        pos = j['pos']
+        value = j['value']
+        return cls(pos, value)
 
 class PeerInfo(CoordinatorMessage):
 
@@ -307,16 +334,18 @@ class CoordinatorPropagateMessage(CoordinatorMessage):
 
     TYPE = 'propagate'
 
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, pos, value):
+        self.pos, self.value = int(pos), value
 
     def to_json(self):
         return {
             'type': self.TYPE,
+            'pos': self.pos,
             'value': self.value
         }
 
     @classmethod
     def from_json(cls, j):
+        pos = j['pos']
         value = j['value']
-        return cls(value)
+        return cls(pos,value)

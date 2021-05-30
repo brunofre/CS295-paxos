@@ -42,9 +42,11 @@ class Node:
         self.print_debug("init")
 
         self.ballot = 0
-        self.prepared_value = None  # contains the prepared value, if any
 
-        # self.value_to_propagate = None # may be updated by coordinator()
+        # values commited, note current position is len of this
+        self.commited_values = []
+
+        self.prepared_value = None  # contains the prepared value, if any
 
         self.propagate_thread = None
 
@@ -70,9 +72,19 @@ class Node:
             msg = Message.receive(s)
             self.print_debug("rcv node msg " + str(msg.to_json()))
 
-            if msg.TYPE != PreparedMessage.TYPE and msg.ballot < self.ballot:
+            if msg.pos < len(self.commited_values):
+                self.print_debug("msg for smaller position, dropping it")
+            elif msg.pos > len(self.commited_values):
+                self.print_debug(f"msg for future position, (TO DO) asking {msg.vk} for its commited_values")
+                # TO DO: get commited values from msg.vk
+            elif msg.TYPE == CommitMessage.TYPE:
+                self.stop_propagate = True
+                self.print_debug(f"Rcv commit value {msg.value} to pos {msg.pos}")
+                self.commited_values.append(msg.value)
+                self.prepared_value = None
+            elif msg.TYPE != PreparedMessage.TYPE and msg.ballot < self.ballot:
                 # note prepared msg can have lower ballot
-                self.print_debug("older ballot, we are at " + str(self.ballot))
+                self.print_debug(f"older ballot, we are at {self.ballot}, ignoring it")
                 # to do: send Nack so nodes stop bothering us with lower ballot stuff?
             else:
                 fromnode = self.nodes[msg.vk]
@@ -81,7 +93,7 @@ class Node:
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
                     preparedmsg = PreparedMessage(
-                        self.ballot, self.prepared_value)
+                        msg.pos, self.ballot, self.prepared_value)
                     preparedmsg.send(
                         self.sk, fromnode["ip"], fromnode["port"])
                     self.ballot = msg.ballot
@@ -89,10 +101,10 @@ class Node:
                     if self.leader == msg.vk:
                         self.stop_propagate = True
                         self.prepared_value = msg.value
-                        acceptmsg = AcceptMessage(msg.ballot)
+                        acceptmsg = AcceptMessage(msg.pos, msg.ballot)
                         acceptmsg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
-                        self.ballot = msg.ballot
+                        self.ballot = msg.ballot  
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
                 else:
                     self.listen_log_lock.acquire()
@@ -109,7 +121,6 @@ class Node:
             if msg is None:
                 break
             self.print_debug("rcv debug msg" + str(msg.to_json()))
-            print("lul")
             time.sleep(1)
             if msg.TYPE == PeerInfo.TYPE:
                 if msg.vk not in self.nodes:
@@ -117,6 +128,12 @@ class Node:
                                           "port": msg.port, "status": None}
                     self.print_debug("Got peer" + str(self.nodes[msg.vk]))
             elif msg.TYPE == CoordinatorPropagateMessage.TYPE:
+                if msg.pos < len(self.commited_values):
+                    self.print_debug(f"recv propagate command for older pos ({msg.pos} vs {len(self.commited_values)}), ignoring it")
+                    continue
+                elif msg.pos > len(self.commited_values):
+                    self.print_debug(f"recv propagate command for future pos ({msg.pos} vs {len(self.commited_values)}), ignoring it")
+                    continue # TO DO: ask other peers for their commited_values so as to get to msg.pos
                 if self.propagate_thread is not None:
                     self.print_debug("Stopping prev propagate thread")
                     # flag that tells propagate_thread to stop trying to propagate
@@ -132,6 +149,8 @@ class Node:
         self.debug_socket.close()
 
     def propagate(self, value):
+
+        pos = len(self.commited_values)
 
         if self.prepared_value is not None:
             value = self.prepared_value
@@ -163,7 +182,7 @@ class Node:
             prepared_ballot = 0  # highest ballot from a prepared msg recv
             accept_keys = []    # peers that accepted our propose()
 
-            preparemsg = PrepareMessage(ballot)
+            preparemsg = PrepareMessage(pos, ballot)
             for k in keys:
                 target = self.nodes[k]
                 preparemsg.send(self.sk, target["ip"], target["port"])
@@ -171,6 +190,8 @@ class Node:
             time.sleep(1)
             self.listen_log_lock.acquire()
             for msg in self.listen_log:
+                if msg.pos != pos:
+                    continue
                 if msg.TYPE == PreparedMessage.TYPE:
                     if msg.value is not None and msg.ballot > prepared_ballot:
                         value = msg.value  # we need the value with highest ballot
@@ -183,7 +204,7 @@ class Node:
             elif len(prepared_keys) + 1 > (len(self.nodes)+1)/2:
                 # we got majority, lets try to propose the value
                 self.print_debug("Prepared succesful, value is " + str(value))
-                proposemsg = ProposeMessage(ballot, value)
+                proposemsg = ProposeMessage(pos, ballot, value)
                 for k in prepared_keys:
                     target = self.nodes[k]
                     proposemsg.send(
@@ -192,14 +213,18 @@ class Node:
                 time.sleep(1)
                 self.listen_log_lock.acquire()
                 for msg in self.listen_log:
-                    if msg.TYPE == AcceptMessage.TYPE and msg.ballot == ballot:
+                    if msg.TYPE == AcceptMessage.TYPE and msg.ballot == ballot and msg.pos == pos:
                         accept_keys.append(msg.vk)
                 self.listen_log = []
                 self.listen_log_lock.release()
                 if len(accept_keys) + 1 > (len(self.nodes)+1)/2:
-                    self.print_debug(
-                        "Succesfully propagated value " + str(value))
-                    self.stop_propagate = True
+                    self.print_debug(f"Succesfully propagated value {value} at position {pos}")
+                    self.commited_values.append(value)
+                    commitmsg = CommitMessage(pos, value)
+                    for node in self.nodes.values():
+                        commitmsg.send(self.sk, node['ip'], node['port'])
+                    self.prepared_value = None
+                    return
                     # TO DO: should stop paxos here, make a PaxosDoneMessage type and send it to coordinator, that sends it to other nodes
                 else:
                     self.print_debug(
