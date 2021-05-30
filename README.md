@@ -32,11 +32,13 @@ python paxos.py
 
 ### Consistency
 
-* Problem:
+* Problem: Assume there are $n = 2m + 1$ nodes. $2m$ of them are honest. There's no previous accepted proposal.
   1. malicious party send prepare message with ballot $b$ to all nodes.
-  2. malicious party send propose message with ballot $b$ and value $v_a$ to half of the nodes, $v_b$ to another half of the nodes.
-  3.
+  2. After receiving $m$ prepared messages, malicious party send propose message with ballot $b$ and value $v_a$ to $m$ nodes, $v_b$ to another $m$ nodes.
+  3. As a result, $m$ of the nodes accept $v_a$ and $m$ of the nodes accept $v_b$.
 
+* Solution:
+  * Nodes need to broadcast their status to other node as what PBFT does?
 
 ### Availability
 
