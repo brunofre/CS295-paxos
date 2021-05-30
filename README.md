@@ -63,6 +63,8 @@ Paxos cannot tolerate partition even without malicious node.
 
 Malicious node prepare a maximum int as ballot number.
 
+> Same as https://stackoverflow.com/questions/19240919/how-do-you-mitigate-proposal-number-overflow-attacks-in-byzantine-paxos
+
 > Solution:
 > * The difference between ballot numbers cannot be larger than $n$?
 
