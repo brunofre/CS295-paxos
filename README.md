@@ -52,7 +52,7 @@ Assume there's a malicious node $M$. Everytime $M$ receives a prepare message $p
 
 ### **P**artition tolerance
 
-
+Paxos cannot tolerate partition even without malicious node.
 
 
 ## General malicious behavior
