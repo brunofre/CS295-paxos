@@ -66,10 +66,10 @@ class Coordinator:
         for vk, replica in self.replicas.items():
             if replica["attack"] == Attack.CONSISTENCY:
                 who = vk
-            if replica["attack"] == Attack.AVILABILITY:
+            elif replica["attack"] == Attack.AVILABILITY or replica["attack"] == Attack.PREPARED_PHASE or replica["attack"] == Attack.PROPOSE_PHASE:
                 while who == vk:
                     who = random.choice(list(self.replicas.keys()))
-            if replica["attack"] == Attack.PREPARE_PHASE_1:
+            elif replica["attack"] == Attack.PREPARE_PHASE:
                 msg = CoordinatorPropagateMessage(pos, value)
                 msg.send(self.replicas[vk]["debug_socket"])
         print_debug(

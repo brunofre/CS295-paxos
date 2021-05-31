@@ -34,7 +34,7 @@ if __name__ == "__main__":
     coord = Coordinator(localhost, coordinator_port)
     t = threading.Thread(target=coord.start)
     threads.append(t)
-    attack = Attack.CONSISTENCY
+    attack = Attack.PROPOSE_PHASE
     nodes = []
     for i in range(3):
         if attack is not None and i == 0:

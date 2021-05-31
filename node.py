@@ -104,6 +104,17 @@ class Node:
                             target = self.nodes[k]
                             prepare_msg.send(
                                 self.sk, target["ip"], target["port"])
+                    elif self.attack == Attack.PREPARED_PHASE:
+                        prepared_msg = PreparedMessage(
+                            msg.pos, self.ballot, None)
+                        prepared_msg.send(
+                            self.sk, fromnode["ip"], fromnode["port"])
+                        self.ballot = msg.ballot
+                    elif self.attack == Attack.PROPOSE_PHASE:
+                        self.ballot = msg.ballot + 1
+                        self.propagate_thread = threading.Thread(
+                            target=self.propagate, args=("attack",))
+                        self.propagate_thread.start()
                     else:
                         prepared_msg = PreparedMessage(
                             msg.pos, self.ballot, self.prepared_value)
@@ -174,7 +185,7 @@ class Node:
         self.stop_propagate = False
         self.leader = self.vk
 
-        if self.attack == Attack.PREPARE_PHASE_1:
+        if self.attack == Attack.PREPARE_PHASE:
             self.ballot = float('inf')
         else:
             self.ballot += 1
@@ -208,7 +219,7 @@ class Node:
             # TO DO: better method here?? we just hope it works in 1sec
             time.sleep(1)
 
-            if self.attack == Attack.PREPARE_PHASE_1:
+            if self.attack == Attack.PREPARE_PHASE:
                 break
 
             self.listen_log_lock.acquire()
@@ -231,7 +242,7 @@ class Node:
                 if self.attack == Attack.CONSISTENCY:
                     propose_msg_a = ProposeMessage(pos, ballot, value)
                     propose_msg_b = ProposeMessage(
-                        pos, ballot, value + " inconsistent")
+                        pos, ballot, value + " attack")
                     for i, k in enumerate(prepared_keys):
                         target = self.nodes[k]
                         if (i < len(prepared_keys) // 2):
@@ -240,6 +251,13 @@ class Node:
                         else:
                             propose_msg_b.send(
                                 self.sk, target["ip"], target["port"])
+                elif self.attack == Attack.PROPOSE_PHASE:
+                    propose_msg = ProposeMessage(
+                        pos, ballot, value + " attack")
+                    for k in prepared_keys:
+                        target = self.nodes[k]
+                        propose_msg.send(
+                            self.sk, target["ip"], target["port"])
                 else:
                     propose_msg = ProposeMessage(pos, ballot, value)
                     for k in prepared_keys:

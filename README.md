@@ -68,13 +68,6 @@ Malicious node send `prepare(b)` where the ballot number `b` is a maximum int th
 > Solution:
 > The difference between ballot numbers cannot be larger than $n$?
 
-#### Attack 2 (safety):
-
-Malicious node replay other nodes' `prepare` message.
-
-> Solution:
-> The ballot number is protected by signature, the ballot will be ignore if it is not the largest. This attack cannot success.
-
 ### Prepared phase
 
 #### Attack 1 (liveness):
@@ -89,10 +82,10 @@ Malicious node didn't send the latest proposal.
 
 #### Attack 1 (safety):
 
-Instead of sending a previously accepted value, malicous node send its own value with a higher ballot number.
+Instead of sending a previously accepted value, malicous node send its own value instead of the previously proposed one.
 
 > Solution:
-> A honest node should reject any proposal which has different value than previously accept one.
+> A honest node should reject any proposal which has different value from the previously accepted one.
 
 ### Accept phase
 

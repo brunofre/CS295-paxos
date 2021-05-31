@@ -4,8 +4,7 @@ from enum import Enum
 class Attack(Enum):
     CONSISTENCY = 1
     AVILABILITY = 2
-    PREPARE_PHASE_1 = 3
-    PREPARE_PHASE_2 = 4
-    PREPARED_PHASE = 5
-    PROPOSE_PHASE = 6
-    ACCEPT_PHASE = 7
+    PREPARE_PHASE = 3
+    PREPARED_PHASE = 4
+    PROPOSE_PHASE = 5
+    ACCEPT_PHASE = 6
