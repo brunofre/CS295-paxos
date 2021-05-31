@@ -91,7 +91,7 @@ Instead of sending a previously accepted value, malicous node send its own value
 
 #### Attack 1 (safety):
 
-Malicious leader tells everyone his proposal is accepted before he receive accept message from the majority.
+Malicious leader send `commit` after his proposal is accepted before he receive accept message from the majority.
 
 > Solution:
 > The inform message should include all accept messages.

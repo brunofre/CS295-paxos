@@ -266,6 +266,14 @@ class Node:
                             self.sk, target["ip"], target["port"])
                     # TO DO: better method here?? we just hope it works in 1sec
 
+                if self.attack == Attack.ACCEPT_PHASE:
+                    self.print_debug(
+                        f"attack, send commit message early. value {value} at position {pos}")
+                    commit_msg = CommitMessage(pos, value)
+                    for node in self.nodes.values():
+                        commit_msg.send(self.sk, node['ip'], node['port'])
+                    break
+
                 time.sleep(1)
                 self.listen_log_lock.acquire()
                 for msg in self.listen_log:
