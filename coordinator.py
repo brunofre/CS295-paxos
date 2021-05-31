@@ -1,5 +1,3 @@
-from attack import Attack
-import struct
 import socket
 import random
 import threading
@@ -68,6 +66,5 @@ class Coordinator:
         who = random.choice(list(self.replicas.keys()))
         print_debug(
             f"Coordinator telling {who} to propagate {value} at pos {pos}")
-        attack = Attack.CONSISTENCY
-        msg = CoordinatorPropagateMessage(pos, value, attack)
+        msg = CoordinatorPropagateMessage(pos, value)
         msg.send(self.replicas[who]["debug_socket"])

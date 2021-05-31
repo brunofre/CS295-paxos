@@ -16,11 +16,11 @@ from ecdsa import SigningKey
 
 
 class Node:
-    def __init__(self, host, port, coordinator_ip, coordinator_port, nodes=None, listen_handler_attack=None):
+    def __init__(self, host, port, coordinator_ip, coordinator_port, nodes=None, attack=None):
         self.host, self.port = host, port
         self.coordinator_ip, self.coordinator_port = coordinator_ip, coordinator_port
         self.nodes = nodes  # dict vk -> {ip, port, status}
-        self.listen_handler_attack = listen_handler_attack
+        self.attack = attack
 
         self.sk = SigningKey.generate(curve=NIST256p)
         self.vk = vk_to_str(self.sk.verifying_key)
@@ -84,7 +84,7 @@ class Node:
             elif msg.TYPE == CommitMessage.TYPE:
                 self.stop_propagate = True
                 self.print_debug(
-                    f"Rcv commit value {msg.value} to pos {msg.pos}")
+                    f"rcv commit value {msg.value} to pos {msg.pos}")
                 self.commited_values.append(msg.value)
                 self.prepared_value = None
             elif msg.TYPE != PreparedMessage.TYPE and msg.ballot < self.ballot:
@@ -98,18 +98,19 @@ class Node:
                     self.stop_propagate = True
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
-                    if self.listen_handler_attack is None:
-                        preparedmsg = PreparedMessage(
-                            msg.pos, self.ballot, self.prepared_value)
-                        preparedmsg.send(
-                            self.sk, fromnode["ip"], fromnode["port"])
-                        self.ballot = msg.ballot
-                    elif self.listen_handler_attack == Attack.AVILABILITY:
+                    if self.attack == Attack.AVILABILITY:
                         prepare_msg = PrepareMessage(msg.pos, msg.ballot + 1)
                         for k in self.nodes.keys():
                             target = self.nodes[k]
                             prepare_msg.send(
                                 self.sk, target["ip"], target["port"])
+                    else:
+                        preparedmsg = PreparedMessage(
+                            msg.pos, self.ballot, self.prepared_value)
+                        preparedmsg.send(
+                            self.sk, fromnode["ip"], fromnode["port"])
+                        self.ballot = msg.ballot
+
                 elif msg.TYPE == ProposeMessage.TYPE:
                     if self.leader == msg.vk:
                         self.stop_propagate = True
@@ -155,7 +156,7 @@ class Node:
                     self.stop_propagate = True
                     self.propagate_thread.join()
                 self.propagate_thread = threading.Thread(
-                    target=self.propagate, args=(msg.value, msg.attack))
+                    target=self.propagate, args=(msg.value,))
                 self.propagate_thread.start()
             elif msg.TYPE == CoordinatorExitCommand.TYPE:
                 break
@@ -163,7 +164,7 @@ class Node:
                 break
         self.debug_socket.close()
 
-    def propagate(self, value, attack=None):
+    def propagate(self, value):
 
         pos = len(self.commited_values)
 
@@ -220,14 +221,7 @@ class Node:
                 # we got majority, lets try to propose the value
                 self.print_debug("Prepared succesful, value is " + str(value))
 
-                if attack is None:
-                    propose_msg = ProposeMessage(pos, ballot, value)
-                    for k in prepared_keys:
-                        target = self.nodes[k]
-                        propose_msg.send(
-                            self.sk, target["ip"], target["port"])
-                    # TO DO: better method here?? we just hope it works in 1sec
-                elif attack == Attack.CONSISTENCY:
+                if self.attack == Attack.CONSISTENCY:
                     propose_msg_a = ProposeMessage(pos, ballot, value)
                     propose_msg_b = ProposeMessage(
                         pos, ballot, str(int(value) + 100))
@@ -239,6 +233,13 @@ class Node:
                         else:
                             propose_msg_b.send(
                                 self.sk, target["ip"], target["port"])
+                else:
+                    propose_msg = ProposeMessage(pos, ballot, value)
+                    for k in prepared_keys:
+                        target = self.nodes[k]
+                        propose_msg.send(
+                            self.sk, target["ip"], target["port"])
+                    # TO DO: better method here?? we just hope it works in 1sec
 
                 time.sleep(1)
                 self.listen_log_lock.acquire()

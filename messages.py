@@ -1,8 +1,6 @@
 import json
-from attack import Attack
 import socket
 import struct
-import base64
 from ecdsa.curves import NIST256p
 from ecdsa.keys import VerifyingKey
 
@@ -337,21 +335,18 @@ class CoordinatorPropagateMessage(CoordinatorMessage):
 
     TYPE = 'propagate'
 
-    def __init__(self, pos, value, attack=None):
+    def __init__(self, pos, value):
         self.pos, self.value = int(pos), value
-        self.attack = attack
 
     def to_json(self):
         return {
             'type': self.TYPE,
             'pos': self.pos,
-            'value': self.value,
-            'attack': self.attack.value
+            'value': self.value
         }
 
     @classmethod
     def from_json(cls, j):
         pos = j['pos']
         value = j['value']
-        attack = Attack(j['attack'])
-        return cls(pos, value, attack)
+        return cls(pos, value)

@@ -1,3 +1,4 @@
+from attack import Attack
 from node import Node
 from coordinator import Coordinator
 import argparse
@@ -10,6 +11,7 @@ parser = argparse.ArgumentParser(prog='Paxos 101')
 
 args = parser.parse_args()
 
+
 def attack_on_consistency():
     # create the coord,
     # create two normal replicas
@@ -17,8 +19,10 @@ def attack_on_consistency():
     # run it
     pass
 
+
 def attack_on_liveness():
     pass
+
 
 if __name__ == "__main__":
     print("Starting debugging")
@@ -33,7 +37,9 @@ if __name__ == "__main__":
 
     nodes = []
     for i in range(3):
-        n = Node(localhost, nodes_port+i, localhost, coordinator_port)
+        attack = Attack.CONSISTENCY
+        n = Node(localhost, nodes_port+i, localhost,
+                 coordinator_port, attack=attack)
         nodes.append(n)
         t = threading.Thread(target=n.start)
         threads.append(t)
