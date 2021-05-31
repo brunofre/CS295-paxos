@@ -110,7 +110,7 @@ class Node:
                         prepared_msg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
-                    #elif self.attack == Attack.PROPOSE_PHASE:
+                    # elif self.attack == Attack.PROPOSE_PHASE:
                     #    self.ballot = msg.ballot + 1
                     #    self.propagate_thread = threading.Thread(
                     #        target=self.propagate, args=("attack",))
@@ -251,7 +251,7 @@ class Node:
                         else:
                             propose_msg_b.send(
                                 self.sk, target["ip"], target["port"])
-                #elif self.attack == Attack.PROPOSE_PHASE:
+                # elif self.attack == Attack.PROPOSE_PHASE:
                 #    propose_msg = ProposeMessage(
                 #        pos, ballot, value + " attack")
                 #    for k in prepared_keys:
@@ -266,7 +266,7 @@ class Node:
                             self.sk, target["ip"], target["port"])
                     # TO DO: better method here?? we just hope it works in 1sec
 
-                if self.attack == Attack.ACCEPT_PHASE:
+                if self.attack == Attack.COMMIT_PHASE:
                     self.print_debug(
                         f"attack, send commit message early. value {value} at position {pos}")
                     commit_msg = CommitMessage(pos, value)

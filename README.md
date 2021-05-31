@@ -89,6 +89,8 @@ Instead of sending a previously accepted value, malicous node send its own value
 
 ### Accept phase
 
+### Commit phase
+
 #### Attack 1 (safety):
 
 Malicious leader send `commit` after his proposal is accepted before he receive accept message from the majority.

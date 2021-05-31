@@ -7,4 +7,5 @@ class Attack(Enum):
     PREPARE_PHASE = 3
     PREPARED_PHASE = 4
     PROPOSE_PHASE = 5
-    ACCEPT_PHASE = 6
+    # ACCEPT_PHASE = 6
+    COMMIT_PHASE = 7
