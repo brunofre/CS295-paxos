@@ -110,11 +110,11 @@ class Node:
                         prepared_msg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
-                    elif self.attack == Attack.PROPOSE_PHASE:
-                        self.ballot = msg.ballot + 1
-                        self.propagate_thread = threading.Thread(
-                            target=self.propagate, args=("attack",))
-                        self.propagate_thread.start()
+                    #elif self.attack == Attack.PROPOSE_PHASE:
+                    #    self.ballot = msg.ballot + 1
+                    #    self.propagate_thread = threading.Thread(
+                    #        target=self.propagate, args=("attack",))
+                    #    self.propagate_thread.start()
                     else:
                         prepared_msg = PreparedMessage(
                             msg.pos, self.ballot, self.prepared_value)
@@ -179,7 +179,7 @@ class Node:
 
         pos = len(self.commited_values)
 
-        if self.prepared_value is not None:
+        if self.attack != Attack.PROPOSE_PHASE and self.prepared_value is not None:
             value = self.prepared_value
 
         self.stop_propagate = False
@@ -209,7 +209,7 @@ class Node:
             keys = random.sample(self.nodes.keys(), len(
                 self.nodes))  # randomize key order
             prepared_keys = []  # peers that returned prepared msg
-            prepared_ballot = 0  # highest ballot from a prepared msg recv
+            prepared_ballot = -1  # highest ballot from a prepared msg recv
             accept_keys = []    # peers that accepted our propose()
 
             prepare_msg = PrepareMessage(pos, ballot)
@@ -227,7 +227,7 @@ class Node:
                 if msg.pos != pos:
                     continue
                 if msg.TYPE == PreparedMessage.TYPE:
-                    if msg.value is not None and msg.ballot > prepared_ballot:
+                    if self.attack != Attack.PROPOSE_PHASE and msg.value is not None and msg.ballot > prepared_ballot:
                         value = msg.value  # we need the value with highest ballot
                         prepared_ballot = msg.ballot
                     prepared_keys.append(msg.vk)
@@ -251,13 +251,13 @@ class Node:
                         else:
                             propose_msg_b.send(
                                 self.sk, target["ip"], target["port"])
-                elif self.attack == Attack.PROPOSE_PHASE:
-                    propose_msg = ProposeMessage(
-                        pos, ballot, value + " attack")
-                    for k in prepared_keys:
-                        target = self.nodes[k]
-                        propose_msg.send(
-                            self.sk, target["ip"], target["port"])
+                #elif self.attack == Attack.PROPOSE_PHASE:
+                #    propose_msg = ProposeMessage(
+                #        pos, ballot, value + " attack")
+                #    for k in prepared_keys:
+                #        target = self.nodes[k]
+                #        propose_msg.send(
+                #            self.sk, target["ip"], target["port"])
                 else:
                     propose_msg = ProposeMessage(pos, ballot, value)
                     for k in prepared_keys:
