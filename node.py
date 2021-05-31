@@ -220,7 +220,8 @@ class Node:
                     # TO DO: better method here?? we just hope it works in 1sec
                 elif attack == Attack.CONSISTENCY:
                     propose_msg_a = ProposeMessage(pos, ballot, value)
-                    propose_msg_b = ProposeMessage(pos, ballot, value + 100)
+                    propose_msg_b = ProposeMessage(
+                        pos, ballot, str(int(value) + 100))
                     for i, k in enumerate(prepared_keys):
                         target = self.nodes[k]
                         if (i < len(prepared_keys) // 2):
