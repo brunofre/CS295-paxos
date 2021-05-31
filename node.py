@@ -16,10 +16,11 @@ from ecdsa import SigningKey
 
 
 class Node:
-    def __init__(self, host, port, coordinator_ip, coordinator_port, nodes=None):
+    def __init__(self, host, port, coordinator_ip, coordinator_port, nodes=None, listen_handler_attack=None):
         self.host, self.port = host, port
         self.coordinator_ip, self.coordinator_port = coordinator_ip, coordinator_port
         self.nodes = nodes  # dict vk -> {ip, port, status}
+        self.listen_handler_attack = listen_handler_attack
 
         self.sk = SigningKey.generate(curve=NIST256p)
         self.vk = vk_to_str(self.sk.verifying_key)
@@ -51,9 +52,10 @@ class Node:
 
         self.propagate_thread = None
 
-        self.listening_thread = threading.Thread(target=self.listen)
+        self.listening_thread = threading.Thread(target=self.listening_handler)
         self.stop_listen = False
-        self.coordinator_thread = threading.Thread(target=self.coordinator)
+        self.coordinator_thread = threading.Thread(
+            target=self.coordinator_handler)
 
         self.listen_log = []  # rotating log, updated by listen() and used by propagate
         self.listen_log_lock = threading.Lock()
@@ -62,7 +64,7 @@ class Node:
         msg = DebugInfo(self.vk, msg)
         msg.send(self.debug_socket)
 
-    def listen(self):
+    def listening_handler(self):
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((self.host, self.port))
@@ -96,17 +98,24 @@ class Node:
                     self.stop_propagate = True
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
-                    preparedmsg = PreparedMessage(
-                        msg.pos, self.ballot, self.prepared_value)
-                    preparedmsg.send(
-                        self.sk, fromnode["ip"], fromnode["port"])
-                    self.ballot = msg.ballot
+                    if self.listen_handler_attack is None:
+                        preparedmsg = PreparedMessage(
+                            msg.pos, self.ballot, self.prepared_value)
+                        preparedmsg.send(
+                            self.sk, fromnode["ip"], fromnode["port"])
+                        self.ballot = msg.ballot
+                    elif self.listen_handler_attack == Attack.AVILABILITY:
+                        prepare_msg = PrepareMessage(msg.pos, msg.ballot + 1)
+                        for k in self.nodes.keys():
+                            target = self.nodes[k]
+                            prepare_msg.send(
+                                self.sk, target["ip"], target["port"])
                 elif msg.TYPE == ProposeMessage.TYPE:
                     if self.leader == msg.vk:
                         self.stop_propagate = True
                         self.prepared_value = msg.value
-                        acceptmsg = AcceptMessage(msg.pos, msg.ballot)
-                        acceptmsg.send(
+                        accept_msg = AcceptMessage(msg.pos, msg.ballot)
+                        accept_msg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
@@ -119,7 +128,7 @@ class Node:
 
         s.close()
 
-    def coordinator(self):
+    def coordinator_handler(self):
         while True:
             msg = CoordinatorMessage.receive(self.debug_socket)
             if msg is None:
