@@ -1,3 +1,4 @@
+from attack import Attack
 import struct
 import socket
 import random
@@ -65,6 +66,8 @@ class Coordinator:
     # picks a random replica and tells it to try to propagate this value
     def random_propagate(self, pos, value):
         who = random.choice(list(self.replicas.keys()))
-        print_debug(f"Coordinator telling {who} to propagate {value} at pos {pos}")
-        msg = CoordinatorPropagateMessage(pos, value)
+        print_debug(
+            f"Coordinator telling {who} to propagate {value} at pos {pos}")
+        attack = Attack.CONSISTENCY
+        msg = CoordinatorPropagateMessage(pos, value, attack)
         msg.send(self.replicas[who]["debug_socket"])

@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class MaliciousAttacks(Enum):
+class Attack(Enum):
     CONSISTENCY = 1
     AVILABILITY = 2
     PREPARE_PHASE_1 = 3

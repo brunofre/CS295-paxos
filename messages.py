@@ -1,4 +1,5 @@
 import json
+from attack import Attack
 import socket
 import struct
 import base64
@@ -242,6 +243,7 @@ class AcceptMessage(Message):
         ballot = j['ballot']
         return cls(pos, ballot)
 
+
 class CommitMessage(Message):
 
     TYPE = 'commit'
@@ -261,6 +263,7 @@ class CommitMessage(Message):
         pos = j['pos']
         value = j['value']
         return cls(pos, value)
+
 
 class PeerInfo(CoordinatorMessage):
 
@@ -334,18 +337,21 @@ class CoordinatorPropagateMessage(CoordinatorMessage):
 
     TYPE = 'propagate'
 
-    def __init__(self, pos, value):
+    def __init__(self, pos, value, attack=None):
         self.pos, self.value = int(pos), value
+        self.attack = attack
 
     def to_json(self):
         return {
             'type': self.TYPE,
             'pos': self.pos,
-            'value': self.value
+            'value': self.value,
+            'attack': self.attack.value
         }
 
     @classmethod
     def from_json(cls, j):
         pos = j['pos']
         value = j['value']
-        return cls(pos,value)
+        attack = Attack(j['attack'])
+        return cls(pos, value, attack)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+from attack import Attack
 import socket
 import random
 import time
@@ -75,16 +76,19 @@ class Node:
             if msg.pos < len(self.commited_values):
                 self.print_debug("msg for smaller position, dropping it")
             elif msg.pos > len(self.commited_values):
-                self.print_debug(f"msg for future position, (TO DO) asking {msg.vk} for its commited_values")
+                self.print_debug(
+                    f"msg for future position, (TO DO) asking {msg.vk} for its commited_values")
                 # TO DO: get commited values from msg.vk
             elif msg.TYPE == CommitMessage.TYPE:
                 self.stop_propagate = True
-                self.print_debug(f"Rcv commit value {msg.value} to pos {msg.pos}")
+                self.print_debug(
+                    f"Rcv commit value {msg.value} to pos {msg.pos}")
                 self.commited_values.append(msg.value)
                 self.prepared_value = None
             elif msg.TYPE != PreparedMessage.TYPE and msg.ballot < self.ballot:
                 # note prepared msg can have lower ballot
-                self.print_debug(f"older ballot, we are at {self.ballot}, ignoring it")
+                self.print_debug(
+                    f"older ballot, we are at {self.ballot}, ignoring it")
                 # to do: send Nack so nodes stop bothering us with lower ballot stuff?
             else:
                 fromnode = self.nodes[msg.vk]
@@ -104,7 +108,7 @@ class Node:
                         acceptmsg = AcceptMessage(msg.pos, msg.ballot)
                         acceptmsg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
-                        self.ballot = msg.ballot  
+                        self.ballot = msg.ballot
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
                 else:
                     self.listen_log_lock.acquire()
@@ -129,18 +133,20 @@ class Node:
                     self.print_debug("Got peer" + str(self.nodes[msg.vk]))
             elif msg.TYPE == CoordinatorPropagateMessage.TYPE:
                 if msg.pos < len(self.commited_values):
-                    self.print_debug(f"recv propagate command for older pos ({msg.pos} vs {len(self.commited_values)}), ignoring it")
+                    self.print_debug(
+                        f"recv propagate command for older pos ({msg.pos} vs {len(self.commited_values)}), ignoring it")
                     continue
                 elif msg.pos > len(self.commited_values):
-                    self.print_debug(f"recv propagate command for future pos ({msg.pos} vs {len(self.commited_values)}), ignoring it")
-                    continue # TO DO: ask other peers for their commited_values so as to get to msg.pos
+                    self.print_debug(
+                        f"recv propagate command for future pos ({msg.pos} vs {len(self.commited_values)}), ignoring it")
+                    continue  # TO DO: ask other peers for their commited_values so as to get to msg.pos
                 if self.propagate_thread is not None:
                     self.print_debug("Stopping prev propagate thread")
                     # flag that tells propagate_thread to stop trying to propagate
                     self.stop_propagate = True
                     self.propagate_thread.join()
                 self.propagate_thread = threading.Thread(
-                    target=self.propagate, args=(msg.value,))
+                    target=self.propagate, args=(msg.value, msg.attack))
                 self.propagate_thread.start()
             elif msg.TYPE == CoordinatorExitCommand.TYPE:
                 break
@@ -148,7 +154,7 @@ class Node:
                 break
         self.debug_socket.close()
 
-    def propagate(self, value):
+    def propagate(self, value, attack=None):
 
         pos = len(self.commited_values)
 
@@ -182,10 +188,10 @@ class Node:
             prepared_ballot = 0  # highest ballot from a prepared msg recv
             accept_keys = []    # peers that accepted our propose()
 
-            preparemsg = PrepareMessage(pos, ballot)
+            prepare_msg = PrepareMessage(pos, ballot)
             for k in keys:
                 target = self.nodes[k]
-                preparemsg.send(self.sk, target["ip"], target["port"])
+                prepare_msg.send(self.sk, target["ip"], target["port"])
             # TO DO: better method here?? we just hope it works in 1sec
             time.sleep(1)
             self.listen_log_lock.acquire()
@@ -204,12 +210,26 @@ class Node:
             elif len(prepared_keys) + 1 > (len(self.nodes)+1)/2:
                 # we got majority, lets try to propose the value
                 self.print_debug("Prepared succesful, value is " + str(value))
-                proposemsg = ProposeMessage(pos, ballot, value)
-                for k in prepared_keys:
-                    target = self.nodes[k]
-                    proposemsg.send(
-                        self.sk, target["ip"], target["port"])
-                # TO DO: better method here?? we just hope it works in 1sec
+
+                if attack is None:
+                    propose_msg = ProposeMessage(pos, ballot, value)
+                    for k in prepared_keys:
+                        target = self.nodes[k]
+                        propose_msg.send(
+                            self.sk, target["ip"], target["port"])
+                    # TO DO: better method here?? we just hope it works in 1sec
+                elif attack == Attack.CONSISTENCY:
+                    propose_msg_a = ProposeMessage(pos, ballot, value)
+                    propose_msg_b = ProposeMessage(pos, ballot, value + 100)
+                    for i, k in enumerate(prepared_keys):
+                        target = self.nodes[k]
+                        if (i < len(prepared_keys) // 2):
+                            propose_msg_a.send(
+                                self.sk, target["ip"], target["port"])
+                        else:
+                            propose_msg_b.send(
+                                self.sk, target["ip"], target["port"])
+
                 time.sleep(1)
                 self.listen_log_lock.acquire()
                 for msg in self.listen_log:
@@ -218,7 +238,8 @@ class Node:
                 self.listen_log = []
                 self.listen_log_lock.release()
                 if len(accept_keys) + 1 > (len(self.nodes)+1)/2:
-                    self.print_debug(f"Succesfully propagated value {value} at position {pos}")
+                    self.print_debug(
+                        f"Succesfully propagated value {value} at position {pos}")
                     self.commited_values.append(value)
                     commitmsg = CommitMessage(pos, value)
                     for node in self.nodes.values():
