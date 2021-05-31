@@ -61,7 +61,7 @@ Paxos cannot tolerate partition even without malicious node.
 
 #### Attack 1 (liveness):
 
-Malicious node prepare a maximum int as ballot number.
+Malicious node send `prepare(b)` where the ballot number `b` is a maximum int then ignore all `prepared` messages. No other nodes can propose.
 
 > Same as https://stackoverflow.com/questions/19240919/how-do-you-mitigate-proposal-number-overflow-attacks-in-byzantine-paxos
 

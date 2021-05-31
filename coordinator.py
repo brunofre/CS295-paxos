@@ -30,7 +30,6 @@ class Coordinator:
             t.start()
 
     def client_thread(self, t, c):
-
         while True:
             msg = CoordinatorMessage.receive(c)
             if msg is None:
@@ -44,7 +43,7 @@ class Coordinator:
                     pinfo = PeerInfo(vk, r["ip"], r["port"])
                     pinfo.send(c)
                 self.replicas[msg.vk] = {
-                    "ip": msg.ip, "port": msg.port, "debug_socket": c, "debugthread": t}
+                    "ip": msg.ip, "port": msg.port, "attack": msg.attack, "debug_socket": c, "debugthread": t}
                 # tell new node that is all we have by sending his info back
                 msg.send(c)
                 # now let older replicas know of the new one
@@ -64,6 +63,15 @@ class Coordinator:
     # picks a random replica and tells it to try to propagate this value
     def random_propagate(self, pos, value):
         who = random.choice(list(self.replicas.keys()))
+        for vk, replica in self.replicas.items():
+            if replica["attack"] == Attack.CONSISTENCY:
+                who = vk
+            if replica["attack"] == Attack.AVILABILITY:
+                while who == vk:
+                    who = random.choice(list(self.replicas.keys()))
+            if replica["attack"] == Attack.PREPARE_PHASE_1:
+                msg = CoordinatorPropagateMessage(pos, value)
+                msg.send(self.replicas[vk]["debug_socket"])
         print_debug(
             f"Coordinator telling {who} to propagate {value} at pos {pos}")
         msg = CoordinatorPropagateMessage(pos, value)

@@ -1,3 +1,4 @@
+from attack import Attack
 import json
 import socket
 import struct
@@ -267,19 +268,21 @@ class PeerInfo(CoordinatorMessage):
 
     TYPE = 'peerinfo'
 
-    def __init__(self, vk, ip, port):
+    def __init__(self, vk, ip, port, attack=None):
         if not isinstance(vk, str):
             vk = vk_to_str(vk)
         self.vk = vk
         self.ip = ip
         self.port = port
+        self.attack = attack
 
     def to_json(self):
         return {
             'type': self.TYPE,
             'vk': self.vk,
             'ip': self.ip,
-            'port': self.port
+            'port': self.port,
+            'attack': self.attack.value if self.attack is not None else None
         }
 
     @classmethod
@@ -287,7 +290,8 @@ class PeerInfo(CoordinatorMessage):
         vk = j['vk']
         ip = j['ip']
         port = j['port']
-        return cls(vk, ip, port)
+        attack = Attack(j['attack']) if j['attack'] is not None else None
+        return cls(vk, ip, port, attack)
 
 
 class DebugInfo(CoordinatorMessage):

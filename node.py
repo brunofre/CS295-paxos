@@ -105,9 +105,9 @@ class Node:
                             prepare_msg.send(
                                 self.sk, target["ip"], target["port"])
                     else:
-                        preparedmsg = PreparedMessage(
+                        prepared_msg = PreparedMessage(
                             msg.pos, self.ballot, self.prepared_value)
-                        preparedmsg.send(
+                        prepared_msg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
 
@@ -174,7 +174,10 @@ class Node:
         self.stop_propagate = False
         self.leader = self.vk
 
-        self.ballot += 1
+        if self.attack == Attack.PREPARE_PHASE_1:
+            self.ballot = float('inf')
+        else:
+            self.ballot += 1
         ballot = self.ballot
 
         # clean up so we don't take older messages as acceptances
@@ -204,6 +207,10 @@ class Node:
                 prepare_msg.send(self.sk, target["ip"], target["port"])
             # TO DO: better method here?? we just hope it works in 1sec
             time.sleep(1)
+
+            if self.attack == Attack.PREPARE_PHASE_1:
+                break
+
             self.listen_log_lock.acquire()
             for msg in self.listen_log:
                 if msg.pos != pos:
@@ -224,7 +231,7 @@ class Node:
                 if self.attack == Attack.CONSISTENCY:
                     propose_msg_a = ProposeMessage(pos, ballot, value)
                     propose_msg_b = ProposeMessage(
-                        pos, ballot, str(int(value) + 100))
+                        pos, ballot, value + " inconsistent")
                     for i, k in enumerate(prepared_keys):
                         target = self.nodes[k]
                         if (i < len(prepared_keys) // 2):
@@ -252,9 +259,22 @@ class Node:
                     self.print_debug(
                         f"Succesfully propagated value {value} at position {pos}")
                     self.commited_values.append(value)
-                    commitmsg = CommitMessage(pos, value)
-                    for node in self.nodes.values():
-                        commitmsg.send(self.sk, node['ip'], node['port'])
+                    if self.attack == Attack.CONSISTENCY:
+                        for vk, node in self.nodes.items():
+                            i = prepared_keys.index(vk)
+                            if i < len(prepared_keys) // 2:
+                                commit_msg = CommitMessage(pos, value)
+                                commit_msg.send(
+                                    self.sk, node['ip'], node['port'])
+                            else:
+                                commit_msg = CommitMessage(
+                                    pos, value + " inconsistent")
+                                commit_msg.send(
+                                    self.sk, node['ip'], node['port'])
+                    else:
+                        commit_msg = CommitMessage(pos, value)
+                        for node in self.nodes.values():
+                            commit_msg.send(self.sk, node['ip'], node['port'])
                     self.prepared_value = None
                     return
                     # TO DO: should stop paxos here, make a PaxosDoneMessage type and send it to coordinator, that sends it to other nodes
@@ -269,7 +289,7 @@ class Node:
 
         if self.nodes is None:
             # receives other nodes' informations from coordinator
-            myinfo = PeerInfo(self.vk, self.host, self.port)
+            myinfo = PeerInfo(self.vk, self.host, self.port, self.attack)
             myinfo.send(self.debug_socket)
 
             msg = CoordinatorMessage.receive(self.debug_socket)

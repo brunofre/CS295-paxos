@@ -34,12 +34,15 @@ if __name__ == "__main__":
     coord = Coordinator(localhost, coordinator_port)
     t = threading.Thread(target=coord.start)
     threads.append(t)
-
+    attack = Attack.CONSISTENCY
     nodes = []
     for i in range(3):
-        attack = Attack.CONSISTENCY
-        n = Node(localhost, nodes_port+i, localhost,
-                 coordinator_port, attack=attack)
+        if attack is not None and i == 0:
+            n = Node(localhost, nodes_port+i, localhost,
+                     coordinator_port, attack=attack)
+        else:
+            n = Node(localhost, nodes_port+i, localhost,
+                     coordinator_port)
         nodes.append(n)
         t = threading.Thread(target=n.start)
         threads.append(t)
