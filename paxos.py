@@ -10,14 +10,17 @@ parser = argparse.ArgumentParser(prog='Paxos 101')
 parser.add_argument("method", help="pick between coordinator, node, debug, attack")
 parser.add_argument("--coordip", type=str)
 parser.add_argument("--coordport", type=int)
-parser.add_argument("ip", type=str)
-parser.add_argument("port", type=int)
+parser.add_argument("--ip", type=str)
+parser.add_argument("--port", type=int)
 parser.add_argument("--attack", type=str, help="CONSISTENCY,AVAILABILITY,PREPARE_PHASE,PREPARED_PHASE,PROPOSE_PHASE,ACCEPT_PHASE,COMMIT_PHASE")
 
 args = parser.parse_args()
 
 if args.method == "node":
     n = Node(args.ip, args.port, args.coordip, args.coordport)
+    n.start()
+elif args.method == "attack":
+    n = Node(args.ip, args.port, args.coordip, args.coordport, attack=getattr(Attack, args.attack))
     n.start()
 elif args.method == "coordinator":
     c = Coordinator(args.ip, args.port)
