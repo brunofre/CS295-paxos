@@ -12,7 +12,7 @@ parser.add_argument("--coordip", type=str)
 parser.add_argument("--coordport", type=int)
 parser.add_argument("--ip", type=str)
 parser.add_argument("--port", type=int)
-parser.add_argument("--attack", type=str, help="CONSISTENCY,AVAILABILITY,PREPARE_PHASE,PREPARED_PHASE,PROPOSE_PHASE,ACCEPT_PHASE,COMMIT_PHASE")
+parser.add_argument("--attack", type=str, help="CONSISTENCY,LIVENESS,PREPARE_PHASE,PREPARED_PHASE,PROPOSE_PHASE,ACCEPT_PHASE,COMMIT_PHASE")
 
 args = parser.parse_args()
 
@@ -60,7 +60,7 @@ elif args.method == "debug":
         pos = input("Enter pos to propagate:")
         value = input("Enter value to propagate:")
         coord.random_propagate(pos, value)
-        time.sleep(5)
+        time.sleep(10)
     # to do: get user input
 
     # for x in threads:

@@ -361,3 +361,27 @@ class CoordinatorPropagateMessage(CoordinatorMessage):
         pos = j['pos']
         value = j['value']
         return cls(pos, value)
+
+class MiddlewareProposeRecv(Message):
+
+    TYPE = 'middleware_proprecv'
+
+    def __init__(self, pos, value, ballot, tovk):
+        self.pos, self.value, self.ballot, self.tovk = int(pos), value, ballot, tovk
+
+    def to_json(self):
+        return {
+            'type': self.TYPE,
+            'pos': self.pos,
+            'tovk': self.tovk,
+            'ballot': self.ballot,
+            'value': self.value
+        }
+
+    @classmethod
+    def from_json(cls, j):
+        pos = j['pos']
+        value = j['value']
+        ballot = j['ballot']
+        tovk = j['tovk']
+        return cls(pos, value, ballot, tovk)

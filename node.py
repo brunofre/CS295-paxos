@@ -60,6 +60,9 @@ class Node:
         self.listen_log = []  # rotating log, updated by listen() and used by propagate
         self.listen_log_lock = threading.Lock()
 
+        self.middleware_proposes = {}
+        self.middleware_enabled = True
+
     def print_debug(self, msg):
         msg = DebugInfo(self.vk, msg)
         msg.send(self.debug_socket)
@@ -79,13 +82,19 @@ class Node:
                 self.print_debug("msg for smaller position, dropping it")
             elif msg.pos > len(self.commited_values):
                 self.print_debug(
-                    f"msg for future position, (TO DO) asking {msg.vk} for its commited_values")
+                    f"msg for future position, dropping it")
                 # TO DO: get commited values from msg.vk
+            ##### middleware
+            elif self.middleware_enabled and self.nodes[msg.vk]['status'] == 'malicious':
+                continue
+            elif self.middleware_enabled and msg.TYPE == MiddlewareProposeRecv.TYPE:
+                index = (msg.vk, msg.pos, msg.ballot)
+                if index not in self.middleware_proposes:
+                    self.middleware_proposes[index] = msg.value
+                elif self.middelware_proposes[index] != msg.value:
+                    self.nodes[msg.tovk]['status'] = 'malicious'
+            #####
             elif msg.TYPE == CommitMessage.TYPE:
-
-                # middleware
-                # check whether we should really commit
-
 
                 self.stop_propagate = True
                 self.print_debug(
@@ -100,47 +109,50 @@ class Node:
             else:
                 fromnode = self.nodes[msg.vk]
                 if msg.TYPE == PrepareMessage.TYPE:
-                    self.stop_propagate = True
+                    if self.propagate_thread:
+                            time.sleep(1)
+                            self.stop_propagate = True
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
-                    if self.attack == Attack.AVAILABILITY:
+                    if self.attack == Attack.LIVENESS:
                         prepare_msg = PrepareMessage(msg.pos, msg.ballot + 1)
                         for k in self.nodes.keys():
                             target = self.nodes[k]
                             prepare_msg.send(
                                 self.sk, target["ip"], target["port"])
-                    elif self.attack == Attack.PREPARED_PHASE:
-                        prepared_msg = PreparedMessage(
-                            msg.pos, self.ballot, None)
-                        prepared_msg.send(
-                            self.sk, fromnode["ip"], fromnode["port"])
-                        self.ballot = msg.ballot
-                    # elif self.attack == Attack.PROPOSE_PHASE:
-                    #    self.ballot = msg.ballot + 1
-                    #    self.propagate_thread = threading.Thread(
-                    #        target=self.propagate, args=("attack",))
-                    #    self.propagate_thread.start()
                     else:
                         prepared_msg = PreparedMessage(
                             msg.pos, self.ballot, self.prepared_value)
                         prepared_msg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
-
                 elif msg.TYPE == ProposeMessage.TYPE:
+                    ##### middleware
+                    if self.middleware_enabled:
+                        proprecv = MiddlewareProposeRecv(msg.pos, msg.value, msg.ballot, msg.vk)
+                        for k, n in self.nodes.items():
+                            if k == msg.vk:
+                                continue
+                            proprecv.send(self.sk, n['ip'], n['port'])
+                    #####
                     if self.leader == msg.vk:
-                        self.stop_propagate = True
-                        self.prepared_value = msg.value
-                        accept_msg = AcceptMessage(msg.pos, msg.ballot)
-                        accept_msg.send(
-                            self.sk, fromnode["ip"], fromnode["port"])
-                        self.ballot = msg.ballot
-
-                        # middleware:
-                        for n in self.nodes.values():
-                            pass # tell them what we accepted so they don't accept something else if enough accepts
-
-
+                        if self.propagate_thread:
+                            time.sleep(1)
+                            self.stop_propagate = True
+                        ##### middleware
+                        if self.middleware_enabled:
+                            if ((msg.vk, msg.pos, msg.ballot) in self.middleware_proposes and\
+                                msg.value != self.middleware_proposes[(msg.vk, msg.pos, msg.ballot)]) or\
+                                ((self.prepared_value is not None) and self.prepared_value != msg.value):
+                                    self.print_debug("Detected malicious behaviour, different proposes to different nodes")
+                                    self.nodes[msg.vk]['status'] = 'malicious'
+                        #####
+                        else:
+                            self.prepared_value = msg.value
+                            accept_msg = AcceptMessage(msg.pos, msg.ballot)
+                            accept_msg.send(
+                                self.sk, fromnode["ip"], fromnode["port"])
+                            self.ballot = msg.ballot
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
                 else:
                     self.listen_log_lock.acquire()
@@ -196,12 +208,6 @@ class Node:
         self.stop_propagate = False
         self.leader = self.vk
 
-        if self.attack == Attack.PREPARE_PHASE:
-            self.ballot = float('inf')
-        else:
-            self.ballot += 1
-        ballot = self.ballot
-
         # clean up so we don't take older messages as acceptances
         time.sleep(1)
         self.listen_log_lock.acquire()
@@ -210,14 +216,19 @@ class Node:
 
         original_value = value
 
-        self.print_debug("Starting propagate of " + value +
-                         " using ballot " + str(ballot))
 
         while not self.stop_propagate:
 
+            time.sleep(2)
+            self.ballot += 1
+            ballot = self.ballot
+
+            self.print_debug("Starting propagate of " + value +
+                         " using ballot " + str(ballot))
+
             # if propagate fails (i.e. no majority) we restart with original value
             value = original_value
-            keys = random.sample(self.nodes.keys(), len(
+            keys = random.sample([k for k in self.nodes.keys() if self.nodes[k]['status'] != 'malicious'], len(
                 self.nodes))  # randomize key order
             prepared_keys = []  # peers that returned prepared msg
             prepared_ballot = -1  # highest ballot from a prepared msg recv
@@ -229,9 +240,6 @@ class Node:
                 prepare_msg.send(self.sk, target["ip"], target["port"])
             # TO DO: better method here?? we just hope it works in 1sec
             time.sleep(1)
-
-            if self.attack == Attack.PREPARE_PHASE:
-                break
 
             self.listen_log_lock.acquire()
             for msg in self.listen_log:
@@ -253,7 +261,7 @@ class Node:
                 if self.attack == Attack.CONSISTENCY:
                     propose_msg_a = ProposeMessage(pos, ballot, value)
                     propose_msg_b = ProposeMessage(
-                        pos, ballot, value + " attack")
+                        pos, ballot, value + 1)
                     for i, k in enumerate(prepared_keys):
                         target = self.nodes[k]
                         if (i < len(prepared_keys) // 2):
@@ -305,7 +313,7 @@ class Node:
                                     self.sk, node['ip'], node['port'])
                             else:
                                 commit_msg = CommitMessage(
-                                    pos, value + " inconsistent")
+                                    pos, value + 1)
                                 commit_msg.send(
                                     self.sk, node['ip'], node['port'])
                     else:

@@ -4,9 +4,19 @@ This is a paxos implementation for CS 295 Blockchain class.
 
 ## Usage
 
+## Usage
 ```
-python paxos.py
+
+python3 paxos.py method ip port --coordip IP --coordport PORT --attack TYPE --enable-middleware
+
 ```
+
+Choose a method between node (needs --coord*), coordinator, demo.
+
+--attack can be used with a node or with demo, can be LIVENESS or SAFETY.
+--enable-middleware enables middleware to protect against both attacks
+
+
 
 ## Structure
 
@@ -26,18 +36,12 @@ python paxos.py
     * `CoordinatorExitCommand`
     * `CoordinatorPropagateMessage`
 
-## Malicious attack on CAP
 
-### Usage
 
-Set the type of attacks in `paxos.py`
-```
-attack = Attack.COMMIT_PHASE
-```
-Set `attack` to `None` if no attacks selected.
 
-### **C**onsistency
-#### Attack 1 (safety):
+## Malicious attacks
+
+### SAFETY:
 
 Assume there are $2n + 1$ nodes. Except the malicious node $M$, all other nodes are honest. Assume a fresh start.
 
@@ -46,26 +50,24 @@ Assume there are $2n + 1$ nodes. Except the malicious node $M$, all other nodes 
   3. As a result, $n$ nodes accept $v_a$ and $n$ nodes accept $v_b$.
 
 > Solution:
-> Nodes can broadcast their status to other node as what PBFT does.
+> Nodes can broadcast every propose they receive to the other nodes. If any mismatch happens (for the same position), then we know the node is acting maliciously.
 
-
-
-### **A**vailability
-#### Attack 1 (liveness):
+### LIVENESS:
 
 Assume there's a malicious node $M$. Everytime $M$ receives a prepare message `prepare(b)`, it always immediately sends a prepare message `prepare(b')` with a $b' > b$ to all nodes and ignore the `prepared` message. In this case, all other nodes will not respond to `prepare(b)` since they have got `prepare(b')`.
 
 > Solution:
 > Ban a node if it refused to respond to a `prepared` message too many times.
 
-### **P**artition tolerance
+### Other attacks
+
+These are some extra attacks for reference only.
+
+#### **P**artition tolerance
 
 Paxos cannot tolerate partition even without malicious node.
 
-
-## General malicious behavior
-
-### Prepare phase
+#### Prepare phase
 
 #### Attack 1 (liveness):
 
@@ -90,10 +92,10 @@ Malicious node didn't send the latest proposal.
 
 #### Attack 1 (safety):
 
-Instead of sending a previously accepted value, malicous node send its own value instead of the previously proposed one.
+Instead of sending a previously prepared value, malicous node send its own value ignoring the previous one.
 
 > Solution:
-> A honest node should reject any proposal which has different value from the previously accepted one.
+> When nodes send an accept(b, v), it should be also broadcast to every other node not only to the leader. The other node's middleware will ignore any propose(b, v') with same ballot but v' != v.
 
 ### Accept phase
 

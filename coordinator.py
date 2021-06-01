@@ -40,10 +40,10 @@ class Coordinator:
                 # sends prev replicas to this one
                 self.replicaslock.acquire()  # released in spread_new_replica below
                 for vk, r in self.replicas.items():
-                    pinfo = PeerInfo(vk, r["ip"], r["port"])
+                    pinfo = PeerInfo(vk, r['sk_for_middleware'], r["ip"], r["port"])
                     pinfo.send(c)
                 self.replicas[msg.vk] = {
-                    "ip": msg.ip, "port": msg.port, "attack": msg.attack, "debug_socket": c, "debugthread": t}
+                    "ip": msg.ip, "port": msg.port, "sk_for_middleware": msg.sk, "attack": msg.attack, "debug_socket": c, "debugthread": t}
                 # tell new node that is all we have by sending his info back
                 msg.send(c)
                 # now let older replicas know of the new one
@@ -66,7 +66,7 @@ class Coordinator:
         for vk, replica in self.replicas.items():
             if replica["attack"] == Attack.CONSISTENCY or replica["attack"] == Attack.COMMIT_PHASE:
                 who = vk
-            elif replica["attack"] == Attack.AVAILABILITY or replica["attack"] == Attack.PREPARED_PHASE or replica["attack"] == Attack.PROPOSE_PHASE:
+            elif replica["attack"] == Attack.LIVENESS or replica["attack"] == Attack.PREPARED_PHASE or replica["attack"] == Attack.PROPOSE_PHASE:
                 while who == vk:
                     who = random.choice(list(self.replicas.keys()))
             elif replica["attack"] == Attack.PREPARE_PHASE:
