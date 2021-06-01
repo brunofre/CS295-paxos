@@ -274,10 +274,9 @@ class PeerInfo(CoordinatorMessage):
 
     TYPE = 'peerinfo'
 
-    def __init__(self, vk, ip, port, attack=None):
-        if not isinstance(vk, str):
-            vk = key_to_str(vk)
-        self.vk = vk
+    def __init__(self, vk, sk, ip, port, attack=None):
+        self.vk = key_to_str(vk)
+        self.sk = key_to_str(sk)
         self.ip = ip
         self.port = port
         self.attack = attack
@@ -286,6 +285,7 @@ class PeerInfo(CoordinatorMessage):
         return {
             'type': self.TYPE,
             'vk': self.vk,
+            'sk': self.sk,
             'ip': self.ip,
             'port': self.port,
             'attack': self.attack.value if self.attack is not None else None
@@ -294,10 +294,11 @@ class PeerInfo(CoordinatorMessage):
     @classmethod
     def from_json(cls, j):
         vk = j['vk']
+        sk = j['sk']
         ip = j['ip']
         port = j['port']
         attack = Attack(j['attack']) if j['attack'] is not None else None
-        return cls(vk, ip, port, attack)
+        return cls(vk, sk, ip, port, attack)
 
 
 class DebugInfo(CoordinatorMessage):
@@ -360,23 +361,3 @@ class CoordinatorPropagateMessage(CoordinatorMessage):
         pos = j['pos']
         value = j['value']
         return cls(pos, value)
-
-
-class MiddlewareKeyshareMessage(Message):
-
-    TYPE = 'middleware_keyshare'
-
-    def __init__(self, sk):
-        sk = key_to_str(sk)
-        self.sk = sk
-
-    def to_json(self):
-        return {
-            'type': self.TYPE,
-            'sk': self.sk
-        }
-
-    @classmethod
-    def from_json(cls, j):
-        sk = key_to_str(j['sk'])
-        return cls(sk, vk)

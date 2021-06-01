@@ -150,7 +150,7 @@ class Node:
             if msg.TYPE == PeerInfo.TYPE:
                 if msg.vk not in self.nodes:
                     self.nodes[msg.vk] = {"ip": msg.ip,
-                                          "port": msg.port, "status": None}
+                                          "port": msg.port, "sk_for_middleware": msg.sk, "status": None}
                     self.print_debug("Got peer" + str(self.nodes[msg.vk]))
             elif msg.TYPE == CoordinatorPropagateMessage.TYPE:
                 if msg.pos < len(self.commited_values):
@@ -264,7 +264,6 @@ class Node:
                         target = self.nodes[k]
                         propose_msg.send(
                             self.sk, target["ip"], target["port"])
-                    # TO DO: better method here?? we just hope it works in 1sec
 
                 if self.attack == Attack.COMMIT_PHASE:
                     self.print_debug(
@@ -274,6 +273,7 @@ class Node:
                         commit_msg.send(self.sk, node['ip'], node['port'])
                     break
 
+                # TO DO: better method here?? we just hope it works in 1sec
                 time.sleep(1)
                 self.listen_log_lock.acquire()
                 for msg in self.listen_log:
@@ -303,7 +303,6 @@ class Node:
                             commit_msg.send(self.sk, node['ip'], node['port'])
                     self.prepared_value = None
                     return
-                    # TO DO: should stop paxos here, make a PaxosDoneMessage type and send it to coordinator, that sends it to other nodes
                 else:
                     self.print_debug(
                         "Didn't get enough accepts: " + str(len(accept_keys)) + ", trying again")
@@ -315,7 +314,7 @@ class Node:
 
         if self.nodes is None:
             # receives other nodes' informations from coordinator
-            myinfo = PeerInfo(self.vk, self.host, self.port, self.attack)
+            myinfo = PeerInfo(self.vk, self.sk, self.host, self.port, self.attack)
             myinfo.send(self.debug_socket)
 
             msg = CoordinatorMessage.receive(self.debug_socket)
@@ -325,7 +324,7 @@ class Node:
                 if msg.vk == myinfo.vk:  # flag that we already got all peers
                     break
                 self.nodes[msg.vk] = {"ip": msg.ip,
-                                      "port": msg.port, "status": None}
+                                      "port": msg.port, "sk_for_middleware": msg.sk, "status": None}
                 self.print_debug("Got peer" + str(self.nodes[msg.vk]))
                 msg = CoordinatorMessage.receive(self.debug_socket)
                 # TO DO: use key exchange for an ephemeral key with this peer
