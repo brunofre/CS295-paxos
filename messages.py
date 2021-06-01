@@ -3,7 +3,7 @@ import json
 import socket
 import struct
 from ecdsa.curves import NIST256p
-from ecdsa.keys import VerifyingKey
+from ecdsa.keys import SigningKey, VerifyingKey
 
 # HELPERS
 
@@ -39,12 +39,16 @@ def udp_recv_msg(sock):
     return r.decode()
 
 
-def vk_to_str(vk):
-    return vk.to_string().hex()
+def key_to_str(key):
+    return key.to_string().hex()
 
 
 def str_to_vk(st):
     return VerifyingKey.from_string(bytes.fromhex(st), curve=NIST256p)
+
+
+def str_to_sk(st):
+    return SigningKey.from_string(bytes.fromhex(st), curve=NIST256p)
 
 ################
 
@@ -97,7 +101,7 @@ class Message:
         j = {
             'payload_string': payload_string,
             'signature': signature,
-            'vk': vk_to_str(sk.verifying_key)
+            'vk': key_to_str(sk.verifying_key)
         }
         return json.dumps(j)
 
@@ -270,7 +274,7 @@ class PeerInfo(CoordinatorMessage):
 
     def __init__(self, vk, ip, port, attack=None):
         if not isinstance(vk, str):
-            vk = vk_to_str(vk)
+            vk = key_to_str(vk)
         self.vk = vk
         self.ip = ip
         self.port = port
@@ -301,7 +305,7 @@ class DebugInfo(CoordinatorMessage):
     def __init__(self, vk, msg):
         self.msg = msg
         if not isinstance(vk, str):
-            vk = vk_to_str(vk)
+            vk = key_to_str(vk)
         self.vk = vk
 
     def to_json(self):
@@ -354,3 +358,24 @@ class CoordinatorPropagateMessage(CoordinatorMessage):
         pos = j['pos']
         value = j['value']
         return cls(pos, value)
+
+
+class MiddlewareKeyshareMessage(CoordinatorMessage):
+
+    TYPE = 'middleware_keyshare'
+
+    def __init__(self, sk, vk):
+        self.sk, self.vk = sk, vk
+
+    def to_json(self):
+        return {
+            'type': self.TYPE,
+            'sk': key_to_str(self.sk),
+            'vk': self.vk
+        }
+
+    @classmethod
+    def from_json(cls, j):
+        sk = str_to_sk(j['sk'])
+        vk = j['vk']
+        return cls(sk, vk)

@@ -23,7 +23,7 @@ class Node:
         self.attack = attack
 
         self.sk = SigningKey.generate(curve=NIST256p)
-        self.vk = vk_to_str(self.sk.verifying_key)
+        self.vk = key_to_str(self.sk.verifying_key)
 
         # connects to coordinator to get nodes and handle debugging
         debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
