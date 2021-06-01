@@ -73,7 +73,7 @@ class Node:
 
         while not self.stop_listen:
             msg = Message.receive(s)
-            self.print_debug("rcv node msg " + str(msg.to_json()))
+            self.print_debug(f"rcv node {msg.vk[:5]} msg {msg.to_json()}")
 
             if msg.pos < len(self.commited_values):
                 self.print_debug("msg for smaller position, dropping it")
