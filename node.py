@@ -61,6 +61,7 @@ class Node:
         self.listen_log_lock = threading.Lock()
 
         self.middleware_proposes = {}
+        self.middleware_prepares = {}
         self.middleware_enabled = middleware
 
     def print_debug(self, msg):
@@ -109,6 +110,15 @@ class Node:
             else:
                 fromnode = self.nodes[msg.vk]
                 if msg.TYPE == PrepareMessage.TYPE:
+                    if self.middleware_enabled:
+                        key = (msg.vk, msg.pos)
+                        if key not in self.middleware_prepares:
+                            self.middleware_prepares[key] = 1
+                        elif self.middleware_prepares[key] >= 2:
+                            self.print_debug(f"Too many prepares for {key}")
+                            continue
+                        else:
+                            self.middleware_prepares[key] += 1
                     if self.propagate_thread:
                         self.print_debug("Got higher ballot prepare, stopping propagate thread")
                         self.stop_propagate = True
@@ -138,11 +148,11 @@ class Node:
                     #####
                     if self.leader == msg.vk:
                         if self.propagate_thread:
-                            time.sleep(1)
                             self.stop_propagate = True
+                            time.sleep(1)
                         ##### middleware
-                        if self.middleware_enabled:
-                            if ((msg.vk, msg.pos, msg.ballot) in self.middleware_proposes and\
+                        if self.middleware_enabled and\
+                                ((msg.vk, msg.pos, msg.ballot) in self.middleware_proposes and\
                                 msg.value != self.middleware_proposes[(msg.vk, msg.pos, msg.ballot)]) or\
                                 ((self.prepared_value is not None) and self.prepared_value != msg.value):
                                     self.print_debug("Detected malicious behaviour, different proposes to different nodes")
@@ -294,7 +304,7 @@ class Node:
                     break
 
                 # TO DO: better method here?? we just hope it works in 1sec
-                time.sleep(1)
+                time.sleep(3)
                 self.listen_log_lock.acquire()
                 for msg in self.listen_log:
                     if msg.TYPE == AcceptMessage.TYPE and msg.ballot == ballot and msg.pos == pos:
