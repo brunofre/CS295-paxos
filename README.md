@@ -28,6 +28,14 @@ python paxos.py
 
 ## Malicious attack on CAP
 
+### Usage
+
+Set the type of attacks in `paxos.py`
+```
+attack = Attack.COMMIT_PHASE
+```
+Set `attack` to `None` if no attacks selected.
+
 ### **C**onsistency
 #### Attack 1 (safety):
 
