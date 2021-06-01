@@ -16,7 +16,7 @@ from ecdsa import SigningKey
 
 
 class Node:
-    def __init__(self, host, port, coordinator_ip, coordinator_port, nodes=None, attack=None):
+    def __init__(self, host, port, coordinator_ip, coordinator_port, nodes=None, attack=None, middleware=False):
         self.host, self.port = host, port
         self.coordinator_ip, self.coordinator_port = coordinator_ip, coordinator_port
         self.nodes = nodes  # dict vk -> {ip, port, status}
@@ -61,7 +61,7 @@ class Node:
         self.listen_log_lock = threading.Lock()
 
         self.middleware_proposes = {}
-        self.middleware_enabled = True
+        self.middleware_enabled = middleware
 
     def print_debug(self, msg):
         msg = DebugInfo(self.vk, msg)
@@ -174,7 +174,7 @@ class Node:
             if msg.TYPE == PeerInfo.TYPE:
                 if msg.vk not in self.nodes:
                     self.nodes[msg.vk] = {"ip": msg.ip,
-                                          "port": msg.port, "sk_for_middleware": msg.sk, "status": None}
+                                          "port": msg.port, "status": None}
                     self.print_debug("Got peer" + str(self.nodes[msg.vk]))
             elif msg.TYPE == CoordinatorPropagateMessage.TYPE:
                 if msg.pos < len(self.commited_values):
@@ -262,7 +262,7 @@ class Node:
                 if self.attack == Attack.SAFETY:
                     propose_msg_a = ProposeMessage(pos, ballot, value)
                     propose_msg_b = ProposeMessage(
-                        pos, ballot, value + 1)
+                        pos, ballot, value + " safety attack")
                     for i, k in enumerate(prepared_keys):
                         target = self.nodes[k]
                         if (i < len(prepared_keys) // 2):
@@ -314,7 +314,7 @@ class Node:
                                     self.sk, node['ip'], node['port'])
                             else:
                                 commit_msg = CommitMessage(
-                                    pos, value + 1)
+                                    pos, value + " safety attack")
                                 commit_msg.send(
                                     self.sk, node['ip'], node['port'])
                     else:
@@ -334,7 +334,7 @@ class Node:
 
         if self.nodes is None:
             # receives other nodes' informations from coordinator
-            myinfo = PeerInfo(self.vk, self.sk, self.host, self.port, self.attack)
+            myinfo = PeerInfo(self.vk, self.host, self.port, self.attack)
             myinfo.send(self.debug_socket)
 
             msg = CoordinatorMessage.receive(self.debug_socket)
@@ -344,7 +344,7 @@ class Node:
                 if msg.vk == myinfo.vk:  # flag that we already got all peers
                     break
                 self.nodes[msg.vk] = {"ip": msg.ip,
-                                      "port": msg.port, "sk_for_middleware": msg.sk, "status": None}
+                                      "port": msg.port, "status": None}
                 self.print_debug("Got peer" + str(self.nodes[msg.vk]))
                 msg = CoordinatorMessage.receive(self.debug_socket)
                 # TO DO: use key exchange for an ephemeral key with this peer

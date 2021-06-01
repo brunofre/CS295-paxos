@@ -81,7 +81,7 @@ class Message:
         payload = json.loads(payload_string)
 
         TYPES = {PrepareMessage, PreparedMessage,
-                 ProposeMessage, AcceptMessage, CommitMessage}
+                 ProposeMessage, AcceptMessage, CommitMessage, MiddlewareProposeRecv}
 
         for msgtype in TYPES:
             if msgtype.is_valid(payload_string):
@@ -274,9 +274,9 @@ class PeerInfo(CoordinatorMessage):
 
     TYPE = 'peerinfo'
 
-    def __init__(self, vk, sk, ip, port, attack=None):
+    def __init__(self, vk, ip, port, attack=None):
         self.vk = key_to_str(vk)
-        self.sk = key_to_str(sk)
+        #self.sk = key_to_str(sk)
         self.ip = ip
         self.port = port
         self.attack = attack
@@ -285,7 +285,7 @@ class PeerInfo(CoordinatorMessage):
         return {
             'type': self.TYPE,
             'vk': self.vk,
-            'sk': self.sk,
+            #'sk': self.sk,
             'ip': self.ip,
             'port': self.port,
             'attack': self.attack.value if self.attack is not None else None
@@ -294,11 +294,11 @@ class PeerInfo(CoordinatorMessage):
     @classmethod
     def from_json(cls, j):
         vk = j['vk']
-        sk = j['sk']
+        #sk = j['sk']
         ip = j['ip']
         port = j['port']
         attack = Attack(j['attack']) if j['attack'] is not None else None
-        return cls(vk, sk, ip, port, attack)
+        return cls(vk, ip, port, attack)
 
 
 class DebugInfo(CoordinatorMessage):

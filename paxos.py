@@ -12,15 +12,18 @@ parser.add_argument("--coordip", type=str)
 parser.add_argument("--coordport", type=int)
 parser.add_argument("--ip", type=str)
 parser.add_argument("--port", type=int)
-parser.add_argument("--attack", type=str, help="SAFETY,LIVENESS,PREPARE_PHASE,PREPARED_PHASE,PROPOSE_PHASE,ACCEPT_PHASE,COMMIT_PHASE")
+parser.add_argument("--attack", type=str, help="SAFETY,LIVENESS")
+parser.add_argument("--middleware", action='count', help="enables middleware against SAFETY and LIVENESS attacks")
 
 args = parser.parse_args()
 
+middleware = args.middleware is not None
+
 if args.method == "node":
-    n = Node(args.ip, args.port, args.coordip, args.coordport)
+    n = Node(args.ip, args.port, args.coordip, args.coordport, middleware=middleware)
     n.start()
 elif args.method == "attack":
-    n = Node(args.ip, args.port, args.coordip, args.coordport, attack=getattr(Attack, args.attack))
+    n = Node(args.ip, args.port, args.coordip, args.coordport, attack=getattr(Attack, args.attack), middleware=middleware)
     n.start()
 elif args.method == "coordinator":
     c = Coordinator(args.ip, args.port)
@@ -41,10 +44,10 @@ elif args.method == "debug":
     for i in range(3):
         if attack is not None and i == 0:
             n = Node(localhost, nodes_port+i, localhost,
-                     coordinator_port, attack=attack)
+                     coordinator_port, attack=attack, middleware=middleware)
         else:
             n = Node(localhost, nodes_port+i, localhost,
-                     coordinator_port)
+                     coordinator_port, middleware=middleware)
         nodes.append(n)
         t = threading.Thread(target=n.start)
         threads.append(t)
