@@ -98,7 +98,7 @@ class Node:
                     self.stop_propagate = True
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
-                    if self.attack == Attack.AVILABILITY:
+                    if self.attack == Attack.AVAILABILITY:
                         prepare_msg = PrepareMessage(msg.pos, msg.ballot + 1)
                         for k in self.nodes.keys():
                             target = self.nodes[k]

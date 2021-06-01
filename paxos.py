@@ -7,24 +7,22 @@ import time
 
 parser = argparse.ArgumentParser(prog='Paxos 101')
 
-# to do, parse arguments
+parser.add_argument("method", help="pick between coordinator, node, debug, attack")
+parser.add_argument("--coordip", type=str)
+parser.add_argument("--coordport", type=int)
+parser.add_argument("ip", type=str)
+parser.add_argument("port", type=int)
+parser.add_argument("--attack", type=str, help="CONSISTENCY,AVAILABILITY,PREPARE_PHASE,PREPARED_PHASE,PROPOSE_PHASE,ACCEPT_PHASE,COMMIT_PHASE")
 
 args = parser.parse_args()
 
-
-def attack_on_consistency():
-    # create the coord,
-    # create two normal replicas
-    # create the malicious
-    # run it
-    pass
-
-
-def attack_on_liveness():
-    pass
-
-
-if __name__ == "__main__":
+if args.method == "node":
+    n = Node(args.ip, args.port, args.coordip, args.coordport)
+    n.start()
+elif args.method == "coordinator":
+    c = Coordinator(args.ip, args.port)
+    c.start()
+elif args.method == "debug":
     print("Starting debugging")
     localhost = "127.0.0.1"
     coordinator_port = 18999
@@ -34,7 +32,9 @@ if __name__ == "__main__":
     coord = Coordinator(localhost, coordinator_port)
     t = threading.Thread(target=coord.start)
     threads.append(t)
-    attack = Attack.COMMIT_PHASE
+
+    attack = getattr(Attack, args.attack)
+    print(attack)
     nodes = []
     for i in range(3):
         if attack is not None and i == 0:
