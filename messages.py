@@ -40,7 +40,9 @@ def udp_recv_msg(sock):
 
 
 def key_to_str(key):
-    return key.to_string().hex()
+    if not isinstance(key, str):
+        key = key.to_string().hex()
+    return key
 
 
 def str_to_vk(st):
@@ -360,22 +362,21 @@ class CoordinatorPropagateMessage(CoordinatorMessage):
         return cls(pos, value)
 
 
-class MiddlewareKeyshareMessage(CoordinatorMessage):
+class MiddlewareKeyshareMessage(Message):
 
     TYPE = 'middleware_keyshare'
 
-    def __init__(self, sk, vk):
-        self.sk, self.vk = sk, vk
+    def __init__(self, sk):
+        sk = key_to_str(sk)
+        self.sk = sk
 
     def to_json(self):
         return {
             'type': self.TYPE,
-            'sk': key_to_str(self.sk),
-            'vk': self.vk
+            'sk': self.sk
         }
 
     @classmethod
     def from_json(cls, j):
-        sk = str_to_sk(j['sk'])
-        vk = j['vk']
+        sk = key_to_str(j['sk'])
         return cls(sk, vk)
