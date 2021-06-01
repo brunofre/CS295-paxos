@@ -82,6 +82,11 @@ class Node:
                     f"msg for future position, (TO DO) asking {msg.vk} for its commited_values")
                 # TO DO: get commited values from msg.vk
             elif msg.TYPE == CommitMessage.TYPE:
+
+                # middleware
+                # check whether we should really commit
+
+
                 self.stop_propagate = True
                 self.print_debug(
                     f"rcv commit value {msg.value} to pos {msg.pos}")
@@ -130,6 +135,12 @@ class Node:
                         accept_msg.send(
                             self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
+
+                        # middleware:
+                        for n in self.nodes.values():
+                            pass # tell them what we accepted so they don't accept something else if enough accepts
+
+
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
                 else:
                     self.listen_log_lock.acquire()
