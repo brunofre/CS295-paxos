@@ -37,7 +37,6 @@ elif args.method == "debug":
     threads.append(t)
 
     attack = getattr(Attack, args.attack)
-    print(attack)
     nodes = []
     for i in range(3):
         if attack is not None and i == 0:
