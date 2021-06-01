@@ -110,8 +110,9 @@ class Node:
                 fromnode = self.nodes[msg.vk]
                 if msg.TYPE == PrepareMessage.TYPE:
                     if self.propagate_thread:
-                            time.sleep(1)
-                            self.stop_propagate = True
+                        self.print_debug("Got higher ballot prepare, stopping propagate thread")
+                        self.stop_propagate = True
+                        time.sleep(0.5)
                     self.leader = msg.vk
                     fromnode = self.nodes[msg.vk]
                     if self.attack == Attack.LIVENESS:
@@ -258,7 +259,7 @@ class Node:
                 # we got majority, lets try to propose the value
                 self.print_debug("Prepared succesful, value is " + str(value))
 
-                if self.attack == Attack.CONSISTENCY:
+                if self.attack == Attack.SAFETY:
                     propose_msg_a = ProposeMessage(pos, ballot, value)
                     propose_msg_b = ProposeMessage(
                         pos, ballot, value + 1)
@@ -304,7 +305,7 @@ class Node:
                     self.print_debug(
                         f"Succesfully propagated value {value} at position {pos}")
                     self.commited_values.append(value)
-                    if self.attack == Attack.CONSISTENCY:
+                    if self.attack == Attack.SAFETY:
                         for vk, node in self.nodes.items():
                             i = prepared_keys.index(vk)
                             if i < len(prepared_keys) // 2:

@@ -64,7 +64,7 @@ class Coordinator:
     def random_propagate(self, pos, value):
         who = random.choice(list(self.replicas.keys()))
         for vk, replica in self.replicas.items():
-            if replica["attack"] == Attack.CONSISTENCY or replica["attack"] == Attack.COMMIT_PHASE:
+            if replica["attack"] == Attack.SAFETY or replica["attack"] == Attack.COMMIT_PHASE:
                 who = vk
             elif replica["attack"] == Attack.LIVENESS or replica["attack"] == Attack.PREPARED_PHASE or replica["attack"] == Attack.PROPOSE_PHASE:
                 while who == vk:

@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class Attack(Enum):
-    CONSISTENCY = 1
+    SAFETY = 1
     LIVENESS = 2
     PREPARE_PHASE = 3
     PREPARED_PHASE = 4
