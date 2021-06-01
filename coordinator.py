@@ -66,7 +66,7 @@ class Coordinator:
         for vk, replica in self.replicas.items():
             if replica["attack"] == Attack.CONSISTENCY or replica["attack"] == Attack.COMMIT_PHASE:
                 who = vk
-            elif replica["attack"] == Attack.AVILABILITY or replica["attack"] == Attack.PREPARED_PHASE or replica["attack"] == Attack.PROPOSE_PHASE:
+            elif replica["attack"] == Attack.AVAILABILITY or replica["attack"] == Attack.PREPARED_PHASE or replica["attack"] == Attack.PROPOSE_PHASE:
                 while who == vk:
                     who = random.choice(list(self.replicas.keys()))
             elif replica["attack"] == Attack.PREPARE_PHASE:
