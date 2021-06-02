@@ -20,10 +20,11 @@ args = parser.parse_args()
 middleware = args.middleware is not None
 
 if args.method == "node":
-    n = Node(args.ip, args.port, args.coordip, args.coordport, middleware=middleware)
-    n.start()
-elif args.method == "attack":
-    n = Node(args.ip, args.port, args.coordip, args.coordport, attack=getattr(Attack, args.attack), middleware=middleware)
+    if args.attack:
+        attack = getattr(Attack, args.attack)
+    else:
+        attack = None
+    n = Node(args.ip, args.port, args.coordip, args.coordport, attack=attack, middleware=middleware)
     n.start()
 elif args.method == "coordinator":
     c = Coordinator(args.ip, args.port)
@@ -40,6 +41,7 @@ elif args.method == "debug":
     threads.append(t)
 
     attack = getattr(Attack, args.attack)
+    
     nodes = []
     for i in range(3):
         if attack is not None and i == 0:
