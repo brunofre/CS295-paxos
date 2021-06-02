@@ -85,7 +85,7 @@ class Node:
                 self.print_debug(
                     f"msg for future position, dropping it")
                 # TO DO: get commited values from msg.vk
-            ##### middleware
+            # middleware
             elif self.middleware_enabled and self.nodes[msg.vk]['status'] == 'malicious':
                 continue
             elif self.middleware_enabled and msg.TYPE == MiddlewareProposeRecv.TYPE:
@@ -120,7 +120,8 @@ class Node:
                         else:
                             self.middleware_prepares[key] += 1
                     if self.propagate_thread:
-                        self.print_debug("Got higher ballot prepare, stopping propagate thread")
+                        self.print_debug(
+                            "Got higher ballot prepare, stopping propagate thread")
                         self.stop_propagate = True
                         time.sleep(0.5)
                     self.leader = msg.vk
@@ -138,25 +139,27 @@ class Node:
                             self.sk, fromnode["ip"], fromnode["port"])
                         self.ballot = msg.ballot
                 elif msg.TYPE == ProposeMessage.TYPE:
-                    ##### middleware
+                    # middleware
                     if self.middleware_enabled:
-                        proprecv = MiddlewareProposeRecv(msg.pos, msg.value, msg.ballot, msg.vk)
+                        prop_recv = MiddlewareProposeRecv(
+                            msg.pos, msg.value, msg.ballot, msg.vk)
                         for k, n in self.nodes.items():
                             if k == msg.vk:
                                 continue
-                            proprecv.send(self.sk, n['ip'], n['port'])
+                            prop_recv.send(self.sk, n['ip'], n['port'])
                     #####
                     if self.leader == msg.vk:
                         if self.propagate_thread:
                             self.stop_propagate = True
                             time.sleep(1)
-                        ##### middleware
+                        # middleware
                         if self.middleware_enabled and\
-                                ((msg.vk, msg.pos, msg.ballot) in self.middleware_proposes and\
-                                msg.value != self.middleware_proposes[(msg.vk, msg.pos, msg.ballot)]) or\
+                                ((msg.vk, msg.pos, msg.ballot) in self.middleware_proposes and
+                                 msg.value != self.middleware_proposes[(msg.vk, msg.pos, msg.ballot)]) or\
                                 ((self.prepared_value is not None) and self.prepared_value != msg.value):
-                                    self.print_debug("Detected malicious behaviour, different proposes to different nodes")
-                                    self.nodes[msg.vk]['status'] = 'malicious'
+                            self.print_debug(
+                                "Detected malicious behaviour, different proposes to different nodes")
+                            self.nodes[msg.vk]['status'] = 'malicious'
                         #####
                         else:
                             self.prepared_value = msg.value
@@ -227,7 +230,6 @@ class Node:
 
         original_value = value
 
-
         while not self.stop_propagate:
 
             time.sleep(2)
@@ -235,7 +237,7 @@ class Node:
             ballot = self.ballot
 
             self.print_debug("Starting propagate of " + value +
-                         " using ballot " + str(ballot))
+                             " using ballot " + str(ballot))
 
             # if propagate fails (i.e. no majority) we restart with original value
             value = original_value
