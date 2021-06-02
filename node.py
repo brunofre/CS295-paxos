@@ -85,7 +85,7 @@ class Node:
                 self.print_debug(
                     f"msg for future position, dropping it")
                 # TO DO: get commited values from msg.vk
-            ##### middleware
+            # middleware
             elif self.middleware_enabled and self.nodes[msg.vk]['status'] == 'malicious':
                 continue
             elif self.middleware_enabled and msg.TYPE == MiddlewareProposeRecv.TYPE:
@@ -108,7 +108,7 @@ class Node:
                     f"older ballot, we are at {self.ballot}, ignoring it")
                 # to do: send Nack so nodes stop bothering us with lower ballot stuff?
             else:
-                fromnode = self.nodes[msg.vk]
+                from_node = self.nodes[msg.vk]
                 if msg.TYPE == PrepareMessage.TYPE:
                     if self.middleware_enabled:
                         key = (msg.vk, msg.pos)
@@ -120,11 +120,12 @@ class Node:
                         else:
                             self.middleware_prepares[key] += 1
                     if self.propagate_thread:
-                        self.print_debug("Got higher ballot prepare, stopping propagate thread")
+                        self.print_debug(
+                            "Got higher ballot prepare, stopping propagate thread")
                         self.stop_propagate = True
                         time.sleep(0.5)
                     self.leader = msg.vk
-                    fromnode = self.nodes[msg.vk]
+                    from_node = self.nodes[msg.vk]
                     if self.attack == Attack.LIVENESS:
                         prepare_msg = PrepareMessage(msg.pos, msg.ballot + 1)
                         for k in self.nodes.keys():
@@ -135,34 +136,36 @@ class Node:
                         prepared_msg = PreparedMessage(
                             msg.pos, self.ballot, self.prepared_value)
                         prepared_msg.send(
-                            self.sk, fromnode["ip"], fromnode["port"])
+                            self.sk, from_node["ip"], from_node["port"])
                         self.ballot = msg.ballot
                 elif msg.TYPE == ProposeMessage.TYPE:
-                    ##### middleware
+                    # middleware
                     if self.middleware_enabled:
-                        proprecv = MiddlewareProposeRecv(msg.pos, msg.value, msg.ballot, msg.vk)
+                        prop_recv = MiddlewareProposeRecv(
+                            msg.pos, msg.value, msg.ballot, msg.vk)
                         for k, n in self.nodes.items():
                             if k == msg.vk:
                                 continue
-                            proprecv.send(self.sk, n['ip'], n['port'])
+                            prop_recv.send(self.sk, n['ip'], n['port'])
                     #####
                     if self.leader == msg.vk:
                         if self.propagate_thread:
                             self.stop_propagate = True
                             time.sleep(1)
-                        ##### middleware
+                        # middleware
                         if self.middleware_enabled and\
-                                ((msg.vk, msg.pos, msg.ballot) in self.middleware_proposes and\
-                                msg.value != self.middleware_proposes[(msg.vk, msg.pos, msg.ballot)]) or\
+                                ((msg.vk, msg.pos, msg.ballot) in self.middleware_proposes and
+                                 msg.value != self.middleware_proposes[(msg.vk, msg.pos, msg.ballot)]) or\
                                 ((self.prepared_value is not None) and self.prepared_value != msg.value):
-                                    self.print_debug("Detected malicious behaviour, different proposes to different nodes")
-                                    self.nodes[msg.vk]['status'] = 'malicious'
+                            self.print_debug(
+                                "Detected malicious behaviour, different proposes to different nodes")
+                            self.nodes[msg.vk]['status'] = 'malicious'
                         #####
                         else:
                             self.prepared_value = msg.value
                             accept_msg = AcceptMessage(msg.pos, msg.ballot)
                             accept_msg.send(
-                                self.sk, fromnode["ip"], fromnode["port"])
+                                self.sk, from_node["ip"], from_node["port"])
                             self.ballot = msg.ballot
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
                 else:
@@ -227,7 +230,6 @@ class Node:
 
         original_value = value
 
-
         while not self.stop_propagate:
 
             time.sleep(2)
@@ -235,7 +237,7 @@ class Node:
             ballot = self.ballot
 
             self.print_debug("Starting propagate of " + value +
-                         " using ballot " + str(ballot))
+                             " using ballot " + str(ballot))
 
             # if propagate fails (i.e. no majority) we restart with original value
             value = original_value
