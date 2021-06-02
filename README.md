@@ -24,6 +24,7 @@ python3 paxos.py method ip port --coordip IP --coordport PORT --attack TYPE --mi
 Choose a method between node (needs --coord*), coordinator (ignores --coord*), demo (takes only the --attack and --middleware parameters).
 
 --attack can be used with a node or with demo, can be LIVENESS or SAFETY.
+
 --middleware enables middleware to protect against both attacks
 
 
@@ -51,11 +52,12 @@ Assume there are $2n + 1$ nodes. Except the malicious node $M$, all other nodes 
 
 ### LIVENESS:
 
-Assume there's a malicious node $M$. Everytime $M$ receives a prepare message `prepare(b)`, it always immediately sends a prepare message `prepare(b+1)` to all nodes and ignore the `prepared` message. In this case, all other nodes will not respond to `prepare(b)` since they have got `prepare(b+1)`.
+Assume there's a malicious node $M$. Everytime $M$ receives a prepare message `prepare(b)`, it always immediately sends a prepare message `prepare(b+1)` to all nodes and ignores the `prepared` messages received back. In this case, all the other nodes will not respond to `prepare(b)` since they have got `prepare(b+1)`.
 
 > Solution (implemented in the middleware):
-> Ignore a node if it tried to `prepare` too many times for the same position
+> Ignore a node if it tried to `prepare` too many times for the same position.
 
+For demo purposes we set the number of max prepares to 3. In actual deployment we should improve this condition, possibly taking into account the timestamp of the prepares, network conditions and how many nodes there are.
 
 ### Other attacks (not implemented)
 
