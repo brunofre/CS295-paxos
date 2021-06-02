@@ -108,7 +108,7 @@ class Node:
                     f"older ballot, we are at {self.ballot}, ignoring it")
                 # to do: send Nack so nodes stop bothering us with lower ballot stuff?
             else:
-                fromnode = self.nodes[msg.vk]
+                from_node = self.nodes[msg.vk]
                 if msg.TYPE == PrepareMessage.TYPE:
                     if self.middleware_enabled:
                         key = (msg.vk, msg.pos)
@@ -125,7 +125,7 @@ class Node:
                         self.stop_propagate = True
                         time.sleep(0.5)
                     self.leader = msg.vk
-                    fromnode = self.nodes[msg.vk]
+                    from_node = self.nodes[msg.vk]
                     if self.attack == Attack.LIVENESS:
                         prepare_msg = PrepareMessage(msg.pos, msg.ballot + 1)
                         for k in self.nodes.keys():
@@ -136,7 +136,7 @@ class Node:
                         prepared_msg = PreparedMessage(
                             msg.pos, self.ballot, self.prepared_value)
                         prepared_msg.send(
-                            self.sk, fromnode["ip"], fromnode["port"])
+                            self.sk, from_node["ip"], from_node["port"])
                         self.ballot = msg.ballot
                 elif msg.TYPE == ProposeMessage.TYPE:
                     # middleware
@@ -165,7 +165,7 @@ class Node:
                             self.prepared_value = msg.value
                             accept_msg = AcceptMessage(msg.pos, msg.ballot)
                             accept_msg.send(
-                                self.sk, fromnode["ip"], fromnode["port"])
+                                self.sk, from_node["ip"], from_node["port"])
                             self.ballot = msg.ballot
                 # prepared/accept need only to modify listen_log for the propagate_thread to use it
                 else:
