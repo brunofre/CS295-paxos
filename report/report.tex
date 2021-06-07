@@ -107,8 +107,8 @@ Figure \ref{fig:normal} shows a normal paxos protocol workflow. Without losing g
         \draw[-latex, ultra thick] (8,-1) -- (10,-2) node [midway,above] {$b, v_a$};
         \draw[-latex, ultra thick] (8,-1) -- (10,-3) node [midway,below] {$b, v_a$};
     \end{tikzpicture}
-    \label{fig:normal}
     \caption{Normal situation}
+    \label{fig:normal}
 \end{figure}
 
 \subsection{SAFETY}
@@ -241,8 +241,8 @@ Nodes can broadcast every propose they receive to the other nodes. If any mismat
         \draw[-latex, ultra thick, dashed] (7,-3) -- (8, -1) node [midway,below] {$b$};
 
     \end{tikzpicture}
-    \label{fig:safety_solution}
     \caption{Safety attack solution}
+    \label{fig:safety_solution}
 \end{figure}
 
 \subsection{LIVENESS}
@@ -313,8 +313,8 @@ Assume there's a malicious node $M$. Everytime $M$ receives a prepare message pr
         % propose
         \draw[-latex, ultra thick, dashed] (10, -3) -- (12, -2) node [midway,below] {$b + 3, v_b$};
     \end{tikzpicture}
-    \label{fig:liveness}
     \caption{Liveness attack}
+    \label{fig:liveness}
 \end{figure}
 
 
@@ -388,8 +388,8 @@ For demo purposes we set the number of max prepares to 3. In actual deployment w
         \draw[-latex, ultra thick] (10,-1) -- (12,-2) node [near end,above] {$b + 2, v_a$};
         \draw[-latex, ultra thick] (10,-1) -- (12,-3) node [midway,below] {$b + 2, v_a$};
     \end{tikzpicture}
-    \label{fig:liveness_solution}
     \caption{Liveness attack solution}
+    \label{fig:liveness_solution}
 \end{figure}
 
 \subsection{Other attacks (not implemented)}
@@ -456,8 +456,8 @@ Malicious node send prepare($b$) where the ballot number $b$ is a maximum int th
         \draw[-latex, ultra thick, dashed] (8, -2) -- (10, -1) node [midway,above] {$\phi, \phi$};
         \draw[-latex, ultra thick, dashed] (8, -3) -- (10, -1) node [midway,below] {$\phi, \phi$};
     \end{tikzpicture}
-    \label{fig:liveness_2}
     \caption{Liveness attack 2}
+    \label{fig:liveness_2}
 \end{figure}
 
 \paragraph*{Solution}
@@ -520,8 +520,8 @@ The difference between consecutive ballot numbers should be bounded
         % commit
         \draw[-latex, ultra thick] (8,-1) -- (10,-2) node [midway,above] {$b, v_a$};
     \end{tikzpicture}
-    \label{fig:liveness_2_solution}
     \caption{Liveness attack 2 solution}
+    \label{fig:liveness_2_solution}
 \end{figure}
 
 \subsubsection{Liveness 3}
@@ -602,8 +602,8 @@ Instead of sending a previously prepared value (that the node received from a pr
         \draw[-latex, ultra thick] (14,-1) -- (16,-2) node [midway,above] {$b + 1, ??$};
         \draw[-latex, ultra thick] (14,-1) -- (16,-3) node [midway,below] {$b + 1, ??$};
     \end{tikzpicture}
-    \label{fig:liveness_3}
     \caption{Liveness attack 3}
+    \label{fig:liveness_3}
 \end{figure}
 
 \paragraph*{Solution}
@@ -682,8 +682,8 @@ When nodes send an accept($b, v$), it should be also broadcast to every other no
         \draw[-latex, ultra thick] (14,-1) -- (16,-2) node [midway,above] {$b + 1, v_a$};
         \draw[-latex, ultra thick] (14,-1) -- (16,-3) node [midway,below] {$b + 1, v_a$};
     \end{tikzpicture}
-    \label{fig:liveness_3_solution}
     \caption{Liveness attack 3 solution}
+    \label{fig:liveness_3_solution}
 \end{figure}
 
 \subsubsection{Safety 2}
@@ -746,8 +746,8 @@ Malicious leader sends commit after his proposal but before he receives accept m
         \draw[-latex, ultra thick] (8,-1) -- (10,-2) node [midway,above] {$b, v_a$};
         \draw[-latex, ultra thick] (8,-1) -- (10,-3) node [midway,below] {$b, v_a$};
     \end{tikzpicture}
-    \label{fig:safety_2}
     \caption{Safety attack 2}
+    \label{fig:safety_2}
 \end{figure}
 
 
@@ -810,8 +810,8 @@ The commit message should include all accept messages (which are signed in our i
         \draw[-latex, ultra thick, dashed] (8,-1) -- (10,-2) node [near end,above=5pt] {$b, v_a, b_{P_2}, b_{P_3}$};
         \draw[-latex, ultra thick, dashed] (8,-1) -- (10,-3) node [midway,below] {$b, v_a, b_{P_2}, b_{P_3}$};
     \end{tikzpicture}
-    \label{fig:safety_2_solution}
     \caption{Safety attack 2 solution}
+    \label{fig:safety_2_solution}
 \end{figure}
 
 \end{document}
