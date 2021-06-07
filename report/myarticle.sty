@@ -1,0 +1,56 @@
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.2cm, right=2.2cm]{geometry}
+%\usepackage{times}		% Select Adobe Times Roman (or equivalent) as default font
+
+
+\usepackage{diagbox}
+
+\usepackage{booktabs}
+\usepackage[nodayofweek,level]{datetime}
+
+\usepackage{listings}
+
+\usepackage{titling}	% Control over the typesetting of the \maketitle command
+%\usepackage{changepage}	% Margin adjustment and detection of odd/even pages
+
+\usepackage{tikz}
+\usetikzlibrary{patterns,fit,arrows,arrows.meta,shapes.geometric}
+
+\usepackage{mathtools}
+\allowdisplaybreaks % math equation page break
+
+\usepackage{amsfonts}	% TEX fonts from the American Mathematical Society (math fonts)
+\usepackage{amssymb}	% amsfonts's friend
+\usepackage{amsthm}     % theorem, proof
+\usepackage[linesnumbered, lined, boxed, commentsnumbered]{algorithm2e}
+
+\usepackage{graphicx}	% takes care of graphic including machinery
+\usepackage{subcaption}
+
+\usepackage{enumitem}
+
+\usepackage{comment}	% \begin{comment} This text is ignored \end{comment}
+\usepackage{cite}		% takes care of citations
+
+\usepackage[outputdir=build/]{minted}
+\allowdisplaybreaks
+\setminted{
+    breaklines,
+    mathescape,
+    linenos,
+    numbersep=5pt,
+    gobble=2,
+    frame=lines,
+    framesep=2mm
+}
+\renewcommand{\MintedPygmentize}{/opt/local/Library/Frameworks/Python.framework/Versions/3.9/bin/pygmentize}
+
+\usepackage{xcolor, colortbl}
+
+\usepackage[final]{hyperref} % adds hyper links inside the generated pdf file
+\hypersetup{
+	colorlinks=true,       % false: boxed links; true: colored links
+	linkcolor=blue,        % color of internal links
+	citecolor=blue,        % color of links to bibliography
+	filecolor=magenta,     % color of file links
+	urlcolor=blue
+}
