@@ -41,18 +41,18 @@ Choose a method between node (needs --coord*), coordinator (ignores --coord*), d
 
 ### SAFETY:
 
-Assume there are $2n + 1$ nodes. Except the malicious node $M$, all other nodes are honest. Assume a fresh start.
+Assume there are 2n + 1 nodes. Except the malicious node M, all other nodes are honest. Assume a fresh start.
 
-  1. $M$ sends `prepare(b)` to all nodes.
-  2. After receiving $n$ amount of `prepared` messages, $M$ sends `propose(b, va)` to $n$ nodes and `propose(b, vb)` to another $n$ nodes, where $v_a \neq v_b$.
-  3. As a result, $n$ nodes accept $v_a$ and $n$ nodes accept $v_b$.
+  1. M sends `prepare(b)` to all nodes.
+  2. After receiving n amount of `prepared` messages, M sends `propose(b, va)` to n nodes and `propose(b, vb)` to another n nodes, where va != vb.
+  3. As a result, n nodes accept va and n nodes accept vb.
 
 > Solution (implemented in the middleware):
 > Nodes can broadcast every propose they receive to the other nodes. If any mismatch happens (for the same position), then we know the node is acting maliciously.
 
 ### LIVENESS:
 
-Assume there's a malicious node $M$. Everytime $M$ receives a prepare message `prepare(b)`, it always immediately sends a prepare message `prepare(b+1)` to all nodes and ignores the `prepared` messages received back. In this case, all the other nodes will not respond to `prepare(b)` since they have got `prepare(b+1)`.
+Assume there's a malicious node M. Everytime M receives a prepare message `prepare(b)`, it always immediately sends a prepare message `prepare(b+1)` to all nodes and ignores the `prepared` messages received back. In this case, all the other nodes will not respond to `prepare(b)` since they have got `prepare(b+1)`.
 
 > Solution (implemented in the middleware):
 > Ignore a node if it tried to `prepare` too many times for the same position.
