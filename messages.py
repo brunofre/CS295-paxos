@@ -7,7 +7,6 @@ from ecdsa.keys import SigningKey, VerifyingKey
 
 # HELPERS
 
-
 def tcp_send_msg(sock, msg):
     if isinstance(msg, str):
         msg = msg.encode()
@@ -38,16 +37,13 @@ def udp_recv_msg(sock):
     r = sock.recv(4096)
     return r.decode()
 
-
 def key_to_str(key):
     if not isinstance(key, str):
         key = key.to_string().hex()
     return key
 
-
 def str_to_vk(st):
     return VerifyingKey.from_string(bytes.fromhex(st), curve=NIST256p)
-
 
 def str_to_sk(st):
     return SigningKey.from_string(bytes.fromhex(st), curve=NIST256p)
@@ -55,7 +51,6 @@ def str_to_sk(st):
 ################
 
 # XMessage classes only need to implement init, to_json, from_json and inherit Message
-
 
 class Message:
 
